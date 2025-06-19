@@ -19,6 +19,7 @@ export class InteractionManager {
         this.gridSystem = null;
         this.assetPlacer = null;
         this.selectionController = null;
+        this.uploadManager = null;
         
         // インタラクション状態
         this.currentMode = null;
@@ -50,6 +51,7 @@ export class InteractionManager {
         this.gridSystem = this.app.getManager('grid');
         this.assetPlacer = this.app.getManager('assetPlacer');
         this.selectionController = this.app.getManager('selection');
+        this.uploadManager = this.app.getManager('upload');
         
         // イベントハンドラーを設定
         this.setupEventHandlers();
@@ -132,7 +134,7 @@ export class InteractionManager {
      * 配置処理
      * @param {BABYLON.PickingInfo} _pickResult - 使用しない（実際はシーンから直接ピッキング）
      */
-    handlePlacement(_pickResult) {
+    async handlePlacement(_pickResult) {
         console.log("=== 配置処理開始 ===");
         
         // マウス位置でピッキングを実行（プレビューと同じ方法）
@@ -231,8 +233,30 @@ export class InteractionManager {
         console.log("配置タイプ:", this.currentMode);
         console.log("最終位置:", hitPoint.toString());
         
-        // アセットを配置
-        const placedMesh = this.assetPlacer.placeAsset(this.currentMode, hitPoint);
+        let placedMesh = null;
+        
+        // アップロードされたアセットの配置をチェック
+        const activeAssetId = this.uploadManager.getActiveAssetId();
+        console.log("アクティブアセットID:", activeAssetId);
+        console.log("配置モード:", this.currentMode);
+        
+        if (this.currentMode === 'uploaded_asset' && activeAssetId) {
+            console.log("アップロードアセットを配置:", activeAssetId);
+            try {
+                placedMesh = await this.uploadManager.placeUploadedAsset(activeAssetId, hitPoint);
+            } catch (error) {
+                console.error("アップロードアセット配置エラー:", error);
+                this.errorHandler.showError(`アセットの配置に失敗しました: ${error.message}`);
+                return;
+            }
+        } else if (this.currentMode !== 'uploaded_asset') {
+            // 通常のアセットを配置
+            placedMesh = this.assetPlacer.placeAsset(this.currentMode, hitPoint);
+        } else {
+            console.error("アップロードアセットが選択されていません");
+            this.errorHandler.showError("アセットが選択されていません。");
+            return;
+        }
         
         if (placedMesh) {
             console.log("アセット配置成功:", placedMesh.name);
@@ -335,7 +359,10 @@ export class InteractionManager {
         if (this.isDragging && this.startingPoint && this.currentMesh) {
             this.handleDragging();
         } else if (this.isPlacing) {
-            this.updatePreview();
+            // プレビュー更新を非同期で実行（エラーを無視）
+            this.updatePreview().catch(error => {
+                console.warn("プレビュー更新エラー:", error);
+            });
         }
     }
 
@@ -369,7 +396,7 @@ export class InteractionManager {
     /**
      * プレビューを更新
      */
-    updatePreview() {
+    async updatePreview() {
         const pickInfo = this.scene.pick(
             this.scene.pointerX,
             this.scene.pointerY,
@@ -420,7 +447,7 @@ export class InteractionManager {
         }
         
         // プレビューメッシュを作成または更新
-        this.showPreview(position, isWallHit ? normal : null);
+        await this.showPreview(position, isWallHit ? normal : null);
         
         // 垂直ヘルパーを表示
         if (!isWallHit) {
@@ -436,9 +463,9 @@ export class InteractionManager {
      * @param {BABYLON.Vector3} position - 位置
      * @param {BABYLON.Vector3|null} wallNormal - 壁の法線
      */
-    showPreview(position, wallNormal) {
+    async showPreview(position, wallNormal) {
         if (!this.previewMesh) {
-            this.createPreviewMesh();
+            await this.createPreviewMesh();
         }
         
         if (this.previewMesh) {
@@ -462,7 +489,7 @@ export class InteractionManager {
     /**
      * プレビューメッシュを作成
      */
-    createPreviewMesh() {
+    async createPreviewMesh() {
         this.cleanupPreview();
         
         let mesh = null;
@@ -517,6 +544,33 @@ export class InteractionManager {
                 material.diffuseColor = PRESET_COLORS.MIKE_DESK;
                 material.alpha = 0.5;
                 mesh.material = material;
+                break;
+                
+            case 'uploaded_asset':
+                // アップロードアセットのプレビュー
+                const activeAssetId = this.uploadManager.getActiveAssetId();
+                if (activeAssetId) {
+                    const assetInfo = this.uploadManager.getAssetInfo(activeAssetId);
+                    if (assetInfo) {
+                        try {
+                            mesh = await this.uploadManager.loadMeshFromUrl(
+                                assetInfo.url, 
+                                'preview_uploaded', 
+                                assetInfo.originalFileName
+                            );
+                            if (mesh) {
+                                mesh.setEnabled(true);
+                                mesh.scaling = new BABYLON.Vector3(0.1, 0.1, 0.1);
+                                this.makeTransparent(mesh);
+                            }
+                        } catch (error) {
+                            console.warn("アップロードアセットプレビューの作成に失敗:", error);
+                            mesh = this.createSimplePreview(new BABYLON.Color3(0.7, 0.5, 0.3));
+                        }
+                    }
+                } else {
+                    mesh = this.createSimplePreview(new BABYLON.Color3(0.7, 0.5, 0.3));
+                }
                 break;
         }
         
@@ -607,6 +661,8 @@ export class InteractionManager {
                 return PRESET_COLORS.JUICE_BOX;
             case ASSET_TYPES.MIKE_DESK:
                 return PRESET_COLORS.MIKE_DESK;
+            case 'uploaded_asset':
+                return new BABYLON.Color3(0.7, 0.5, 0.3);
             default:
                 return new BABYLON.Color3(0, 0.7, 1);
         }
@@ -618,7 +674,15 @@ export class InteractionManager {
      */
     setPlacementMode(mode) {
         console.log(`=== 配置モード設定: ${mode} ===`);
-        this.exitPlacementMode();
+        
+        // アップロードアセット以外の場合は既存の配置モードを終了
+        if (mode !== 'uploaded_asset') {
+            this.exitPlacementMode();
+        } else {
+            // アップロードアセットの場合はプレビューのみクリーンアップ
+            this.cleanupPreview();
+            this.gridSystem.hideVerticalHelper();
+        }
         
         this.currentMode = mode;
         this.isPlacing = true;
@@ -640,6 +704,11 @@ export class InteractionManager {
         this.currentMode = null;
         this.cleanupPreview();
         this.gridSystem.hideVerticalHelper();
+        
+        // アップロードマネージャーの配置モードもリセット
+        if (this.uploadManager) {
+            this.uploadManager.resetPlacementMode();
+        }
     }
 
     /**

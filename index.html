@@ -26,6 +26,23 @@
         <button id="juiceBoxBtn">ジュースボックスを配置</button>
         <button id="mikeDeskBtn">マイクデスクを配置</button>
 
+        <!-- GLBアップロード機能 -->
+        <div class="upload-section">
+            <h4>カスタムアセット (GLB)</h4>
+            <div class="upload-controls">
+                <input type="file" id="glbFileInput" accept=".glb,.gltf" multiple style="display: none;">
+                <button id="uploadBtn" class="upload-button">📁 GLBファイルを選択</button>
+                <div id="uploadStatus" class="upload-status"></div>
+            </div>
+            
+            <!-- アップロードされたアセットリスト -->
+            <div id="uploadedAssets" class="uploaded-assets">
+                <div id="uploadedAssetsList" class="uploaded-assets-list">
+                    <div class="no-assets">GLBファイルをアップロードしてください</div>
+                </div>
+            </div>
+        </div>
+
         <!-- 1人称モード切り替えボタン -->
         <button id="firstPersonBtn">1人称モード</button>
 

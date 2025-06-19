@@ -20,21 +20,25 @@ html, body {
     position: absolute;
     top: 10px;
     left: 10px;
-    background-color: rgba(255, 255, 255, 0.9);
+    background-color: rgba(40, 44, 52, 0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     padding: 0;
-    border-radius: 8px;
+    border-radius: 12px;
     z-index: 10;
-    width: 280px; /* 幅を広げる */
+    width: 280px;
     max-width: calc(100vw - 40px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
     max-height: calc(100vh - 40px);
     overflow-y: auto;
     overflow-x: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .controls-content {
     padding: 15px;
     padding-top: 10px;
+    color: #e0e0e0;
 }
 
 .controls-header {
@@ -44,29 +48,30 @@ html, body {
     padding: 12px 15px;
     cursor: pointer;
     margin: 0;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     width: 100%;
-    background: #4CAF50;
+    background: rgba(60, 64, 72, 0.9);
     border: none;
     text-align: left;
-    border-radius: 8px 8px 0 0;
+    border-radius: 12px 12px 0 0;
     transition: background-color 0.2s;
 }
 
 .controls-header:hover {
-    background-color: #45a049;
+    background-color: rgba(70, 74, 82, 0.9);
 }
 
 .controls-header h3 {
     margin: 0;
-    color: white;
+    color: #f0f0f0;
     font-size: 16px;
-    font-weight: bold;
+    font-weight: 500;
+    letter-spacing: 0.5px;
 }
 
 .toggle-icon {
     font-size: 18px;
-    color: white;
+    color: #d0d0d0;
     margin-left: 10px;
     min-width: 20px;
     display: flex;
@@ -102,23 +107,32 @@ html, body {
 
 .controls button {
     margin: 5px 0;
-    padding: 8px 12px;
+    padding: 10px 15px;
     cursor: pointer;
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    border-radius: 4px;
+    background-color: rgba(60, 64, 72, 0.8);
+    color: #e0e0e0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
     width: 100%;
-    transition: background-color 0.3s;
+    transition: all 0.3s ease;
+    font-weight: 400;
+    letter-spacing: 0.3px;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
 }
 
 .controls button:hover {
-    background-color: #45a049;
+    background-color: rgba(80, 84, 92, 0.9);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .controls button.active {
-    background-color: #357a38;
-    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.3);
+    background-color: rgba(100, 104, 112, 0.9);
+    border-color: rgba(255, 255, 255, 0.3);
+    box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.4);
+    color: #ffffff;
 }
 
 .control-group {
@@ -128,25 +142,29 @@ html, body {
 .control-group label {
     display: block;
     margin-bottom: 5px;
-    color: #333;
+    color: #c0c0c0;
+    font-weight: 400;
 }
 
 .control-group input[type="range"],
 .control-group select {
     width: 100%;
     padding: 5px;
-    border-radius: 4px;
-    border: 1px solid #ddd;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background-color: rgba(60, 64, 72, 0.6);
+    color: #e0e0e0;
 }
 
 /* ライティング設定用スタイル */
 .lighting-controls {
-    background-color: rgba(0, 0, 0, 0.05);
+    background-color: rgba(20, 24, 32, 0.4);
     padding: 8px;
-    border-radius: 4px;
+    border-radius: 8px;
     margin-top: 5px;
     max-height: 200px;
     overflow-y: auto;
+    border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .lighting-slider {
@@ -551,4 +569,182 @@ html, body {
     .control-group {
         margin: 15px 0;
     }
+}
+
+/* GLBアップロード機能のスタイル */
+.upload-section {
+    margin-top: 15px;
+    padding: 12px;
+    background-color: rgba(20, 24, 32, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+}
+
+.upload-section h4 {
+    margin: 0 0 10px 0;
+    color: #d0d0d0;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+}
+
+.upload-controls {
+    margin-bottom: 12px;
+}
+
+.upload-button {
+    width: 100%;
+    padding: 10px 15px;
+    background-color: rgba(80, 84, 92, 0.8);
+    color: #e0e0e0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    margin-bottom: 8px;
+    font-weight: 400;
+    letter-spacing: 0.3px;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+}
+
+.upload-button:hover {
+    background-color: rgba(100, 104, 112, 0.9);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.upload-status {
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 3px;
+    text-align: center;
+    min-height: 16px;
+}
+
+.upload-status.loading {
+    background-color: #e3f2fd;
+    color: #1976d2;
+}
+
+.upload-status.success {
+    background-color: #e8f5e8;
+    color: #2e7d32;
+}
+
+.upload-status.error {
+    background-color: #ffebee;
+    color: #c62828;
+}
+
+.upload-status.info {
+    background-color: #fff3e0;
+    color: #ef6c00;
+}
+
+.uploaded-assets {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 8px;
+    margin-top: 8px;
+}
+
+.uploaded-assets-list {
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+.no-assets {
+    text-align: center;
+    color: #888;
+    font-size: 12px;
+    padding: 8px;
+    font-style: italic;
+}
+
+.uploaded-asset-item {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 6px;
+    gap: 2px;
+}
+
+.uploaded-asset-btn {
+    width: 100%;
+    padding: 8px 10px;
+    background-color: rgba(70, 74, 82, 0.8);
+    color: #d0d0d0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    text-align: center;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+}
+
+.uploaded-asset-btn:hover {
+    background-color: rgba(90, 94, 102, 0.9);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.uploaded-asset-btn.active {
+    background-color: rgba(110, 114, 122, 0.9);
+    border-color: rgba(255, 255, 255, 0.3);
+    box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.4);
+    color: #ffffff;
+}
+
+.delete-asset-btn {
+    width: 100%;
+    height: 20px;
+    padding: 2px;
+    background-color: rgba(120, 40, 40, 0.8);
+    color: #e0e0e0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 10px;
+    line-height: 1;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+}
+
+.delete-asset-btn:hover {
+    background-color: rgba(160, 60, 60, 0.9);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* ドラッグ&ドロップスタイル */
+.upload-section.drag-over {
+    background-color: rgba(80, 90, 120, 0.3);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* スクロールバーのスタイル（アップロードリスト用） */
+.uploaded-assets-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.uploaded-assets-list::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 2px;
+}
+
+.uploaded-assets-list::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 2px;
+}
+
+.uploaded-assets-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3);
 }

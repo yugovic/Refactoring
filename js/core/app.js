@@ -16,6 +16,7 @@ import { UIManager } from '../ui/ui-manager.js';
 import { SelectionController } from '../interaction/selection-controller.js';
 import { LoadingManager } from '../ui/loading-manager.js';
 import { EnvironmentManager } from '../environment/environment-manager.js';
+import { UploadManager } from '../assets/upload-manager.js';
 
 export class App {
     constructor(canvas) {
@@ -62,6 +63,7 @@ export class App {
             this.managers.interaction = new InteractionManager(this, errorHandler);
             this.managers.ui = new UIManager(this, errorHandler);
             this.managers.environment = new EnvironmentManager(scene, errorHandler);
+            this.managers.upload = new UploadManager(scene, this.managers.assetPlacer, errorHandler);
             this.loadingManager.setProgress(40);
 
             // 環境をセットアップ
@@ -70,6 +72,12 @@ export class App {
             // インタラクションとUIを初期化
             this.managers.interaction.initialize();
             this.managers.ui.initialize();
+            
+            // アップロードマネージャーを初期化
+            this.managers.upload.initialize();
+            
+            // UploadManagerにInteractionManagerの参照を設定
+            this.managers.upload.setInteractionManager(this.managers.interaction);
             this.loadingManager.setProgress(100);
 
             this.isInitialized = true;

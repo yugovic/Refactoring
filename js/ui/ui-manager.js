@@ -125,6 +125,14 @@ export class UIManager {
         this.elements.helpBtn = document.getElementById("helpBtn");
         this.elements.helpPanel = document.querySelector(".help-panel");
         this.elements.helpCloseBtn = document.getElementById("helpCloseBtn");
+        
+        // アップロード機能
+        this.elements.upload = {
+            fileInput: document.getElementById("glbFileInput"),
+            uploadBtn: document.getElementById("uploadBtn"),
+            statusDiv: document.getElementById("uploadStatus"),
+            assetsList: document.getElementById("uploadedAssetsList")
+        };
     }
 
     /**
@@ -501,6 +509,11 @@ export class UIManager {
         [this.elements.cubeBtn, this.elements.recordBtn, 
          this.elements.juiceBoxBtn, this.elements.mikeDeskBtn].forEach(btn => {
             if (btn) btn.classList.remove("active");
+        });
+        
+        // アップロードアセットボタンもリセット
+        document.querySelectorAll('.uploaded-asset-btn').forEach(btn => {
+            btn.classList.remove('active');
         });
     }
 
