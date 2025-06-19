@@ -178,28 +178,64 @@ export class SelectionController {
      * @returns {BABYLON.Mesh|null} 選択されたメッシュ
      */
     selectFromPickResult(pickResult) {
-        if (!pickResult.hit || !pickResult.pickedMesh) return null;
+        if (!pickResult.hit || !pickResult.pickedMesh) {
+            console.log("❌ ピック失敗: ヒットなしまたはメッシュなし");
+            return null;
+        }
         
         let targetMesh = null;
         const pickedMesh = pickResult.pickedMesh;
         
+        // スカイボックスや背景要素は除外
+        if (pickedMesh.name === 'skybox' || 
+            pickedMesh.name.includes('background') || 
+            pickedMesh.name.includes('sky')) {
+            console.log("🌅 背景要素をスキップ:", pickedMesh.name);
+            return null;
+        }
+        
+        console.log(`🎯 ピック結果の調査:`, {
+            pickedMeshName: pickedMesh.name,
+            hasMetadata: !!pickedMesh.metadata,
+            metadata: pickedMesh.metadata,
+            parentAsset: pickedMesh.metadata?.parentAsset?.name,
+            parentAssetPlacementTime: pickedMesh.metadata?.parentAsset?.metadata?.placementTime,
+            hasParent: !!pickedMesh.parent,
+            parentName: pickedMesh.parent?.name,
+            isPickable: pickedMesh.isPickable,
+            isEnabled: pickedMesh.isEnabled()
+        });
+        
         // メタデータから親アセットを取得（最優先）
         if (pickedMesh.metadata && pickedMesh.metadata.parentAsset) {
             targetMesh = pickedMesh.metadata.parentAsset;
+            console.log(`✅ メタデータから親アセット取得: ${targetMesh.name}`);
         }
         // 直接選択可能なメッシュ
         else if (this.isUserPlacedMesh(pickedMesh)) {
             targetMesh = pickedMesh;
+            console.log(`✅ 直接選択: ${targetMesh.name}`);
         } 
         // 親メッシュから特定
         else if (pickedMesh.parent && this.isUserPlacedMesh(pickedMesh.parent)) {
             targetMesh = pickedMesh.parent;
+            console.log(`✅ 親メッシュから特定: ${targetMesh.name}`);
+        }
+        else {
+            console.log(`❌ 選択可能なアセットが見つからない:`, {
+                pickedName: pickedMesh.name,
+                isUserPlaced: this.isUserPlacedMesh(pickedMesh),
+                parentIsUserPlaced: pickedMesh.parent ? this.isUserPlacedMesh(pickedMesh.parent) : false
+            });
         }
         
         // 選択可能なメッシュの場合
         if (targetMesh && this.isSelectable(targetMesh)) {
+            console.log(`🎉 メッシュ選択実行: ${targetMesh.name}`);
             this.selectMesh(targetMesh);
             return targetMesh;
+        } else if (targetMesh) {
+            console.log(`⚠️ メッシュは見つかったが選択不可: ${targetMesh.name}, selectable=${this.isSelectable(targetMesh)}`);
         }
         
         return null;
@@ -212,14 +248,33 @@ export class SelectionController {
      */
     isUserPlacedMesh(mesh) {
         if (!mesh || !mesh.name) {
+            console.log(`❌ isUserPlacedMesh: メッシュまたは名前がない`);
             return false;
         }
         
-        return mesh.name.startsWith("cube_") || 
-               mesh.name.startsWith("burger_") ||
-               mesh.name.startsWith("record_") ||
-               mesh.name.startsWith("juiceBox_") ||
-               mesh.name.startsWith("mikeDesk_");
+        const name = mesh.name;
+        const isUserPlaced = name.startsWith("cube_") || 
+                           name.startsWith("burger_") ||
+                           name.startsWith("record_") ||
+                           name.startsWith("juiceBox_") ||
+                           name.startsWith("mikeDesk_");
+        
+        console.log(`🔍 ユーザー配置チェック [${name}]: ${isUserPlaced}`);
+        
+        if (!isUserPlaced) {
+            // より詳細な分析
+            console.log(`  名前パターン分析:`, {
+                hasCube: name.includes("cube"),
+                hasBurger: name.includes("burger"),  
+                hasRecord: name.includes("record"),
+                hasJuice: name.includes("juice"),
+                hasMike: name.includes("mike"),
+                hasDesk: name.includes("desk"),
+                fullName: name
+            });
+        }
+        
+        return isUserPlaced;
     }
 
     /**

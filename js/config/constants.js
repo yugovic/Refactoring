@@ -9,7 +9,23 @@ export const ASSET_URLS = {
     BURGER: "./assets/Burger.glb",
     RECORD_MACHINE: "./assets/RecordMachine.glb",
     JUICE_BOX: "./assets/juice_boxv3.glb",
+    BACKGROUND_360: "./assets/BackGroundTest360",
     FLARE_TEXTURE: "https://assets.babylonjs.com/textures/flare.png"
+};
+
+// 360度背景設定
+export const BACKGROUND_360_SETTINGS = {
+    DIAMETER: 100,              // スカイボックスの直径
+    FLIP_Y: true,              // Y軸（上下）を反転するか
+    FLIP_X: false,             // X軸（左右）を反転するか
+    ROTATION_Y: 0,             // Y軸回転（ラジアン）
+    ROTATION_X: 0,             // X軸回転（ラジアン）
+    ROTATION_Z: 0,             // Z軸回転（ラジアン）
+    BRIGHTNESS: 0.3,           // 明度調整（0-2）
+    CONTRAST: 1.0,             // コントラスト調整（0-2）
+    SATURATION: 1.0,           // 彩度調整（0-2）
+    HUE_SHIFT: 0,              // 色相シフト（0-360度）
+    WRAP_MODE: 'MIRROR'        // テクスチャラップモード（'CLAMP', 'MIRROR', 'WRAP'）
 };
 
 // アセットタイプ
@@ -17,7 +33,10 @@ export const ASSET_TYPES = {
     CUBE: 'cube',       // バーガー
     RECORD_MACHINE: 'recordMachine',   // レコードマシン
     JUICE_BOX: 'juiceBox',
-    MIKE_DESK: 'mikeDesk'
+    MIKE_DESK: 'mikeDesk',
+    // 環境装飾オブジェクト
+    TREE: 'tree',
+    BUILDING: 'building'
 };
 
 // モデルのスケール設定
@@ -193,4 +212,19 @@ export const NETWORK_SETTINGS = {
     TIMEOUT: 30000,              // タイムアウト時間（30秒）
     RETRY_COUNT: 3,              // リトライ回数
     RETRY_DELAY: 1000           // リトライ間隔（ミリ秒）
+};
+
+// 環境装飾オブジェクト設定
+export const ENVIRONMENT_OBJECTS = {
+    TREES: [
+        { position: { x: 15, y: 0, z: 8 }, scale: { x: 0.8, y: 1.2, z: 0.8 } },
+        { position: { x: -12, y: 0, z: -15 }, scale: { x: 1.0, y: 1.1, z: 1.0 } },
+        { position: { x: 18, y: 0, z: -10 }, scale: { x: 0.9, y: 1.3, z: 0.9 } },
+        { position: { x: -20, y: 0, z: 12 }, scale: { x: 1.1, y: 1.0, z: 1.1 } }
+    ],
+    BUILDINGS: [
+        { position: { x: -25, y: 0, z: -8 }, scale: { x: 2.0, y: 1.5, z: 1.8 }, rotation: { y: 0.3 } },
+        { position: { x: 22, y: 0, z: 15 }, scale: { x: 1.5, y: 2.0, z: 1.2 }, rotation: { y: -0.8 } },
+        { position: { x: 12, y: 0, z: -22 }, scale: { x: 1.8, y: 1.8, z: 2.2 }, rotation: { y: 1.2 } }
+    ]
 };

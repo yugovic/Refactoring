@@ -233,10 +233,16 @@ export class AssetLoader {
             // クローンを有効化
             clonedModel.setEnabled(true);
             
-            // クローンされた子メッシュも有効化
+            // クローンされた子メッシュも有効化し、ユニークな名前を付与
             const childMeshes = clonedModel.getChildMeshes();
-            childMeshes.forEach(childMesh => {
+            childMeshes.forEach((childMesh, index) => {
                 childMesh.setEnabled(true);
+                
+                // 子メッシュにもユニークな名前を付与（重複防止）
+                const originalChildName = childMesh.name;
+                childMesh.name = `${name}_child${index}_${originalChildName}`;
+                
+                console.log(`  子メッシュ名変更: ${originalChildName} → ${childMesh.name}`);
             });
             
             console.log(`Successfully cloned ${modelType} as ${name} with ${childMeshes.length} child meshes`);

@@ -212,32 +212,90 @@ export class AssetPlacer {
             // まず基準位置に配置
             mesh.position = position.clone();
             
-            // バウンディングボックスの更新を強制
-            mesh.computeWorldMatrix(true);
-            mesh.refreshBoundingInfo();
+            // メッシュが有効化されていることを確認
+            mesh.setEnabled(true);
             
-            // 子メッシュも含めてバウンディング情報を更新
+            // 子メッシュも有効化
             const childMeshes = mesh.getChildMeshes();
+            childMeshes.forEach(child => {
+                child.setEnabled(true);
+            });
+            
+            console.log(`🔍 メッシュ調査 [${mesh.name}]:`, {
+                hasGeometry: !!mesh.geometry,
+                childCount: childMeshes.length,
+                isEnabled: mesh.isEnabled(),
+                childNames: childMeshes.map(c => c.name)
+            });
+            
+            // 少し待ってからバウンディングボックスを計算
+            setTimeout(() => {
+                this.calculateAndSetPosition(mesh, position, childMeshes);
+            }, 50);
+            
+            return;
+            
+        } catch (error) {
+            console.error(`❌ アセット配置エラー [${mesh.name}]:`, error);
+            mesh.position.y = position.y + 0.05;
+        }
+    }
+    
+    /**
+     * バウンディングボックス計算と位置設定
+     * @param {BABYLON.Mesh} mesh - メッシュ
+     * @param {BABYLON.Vector3} position - 基準位置
+     * @param {Array} childMeshes - 子メッシュ配列
+     */
+    calculateAndSetPosition(mesh, position, childMeshes) {
+        try {
+            // 全体のワールドマトリックスを更新
+            mesh.computeWorldMatrix(true);
+            
+            // 子メッシュのワールドマトリックスも更新
             childMeshes.forEach(child => {
                 child.computeWorldMatrix(true);
                 child.refreshBoundingInfo();
             });
             
-            // バウンディングボックスを取得
-            const boundingInfo = mesh.getBoundingInfo();
+            // メインメッシュのバウンディング情報を更新
+            mesh.refreshBoundingInfo();
+            
+            // バウンディングボックスを取得（子メッシュを含む）
+            let boundingInfo;
+            let usedChildMesh = false;
+            
+            if (childMeshes.length > 0) {
+                // 子メッシュがある場合は、子メッシュのバウンディングボックスを使用
+                const validChildren = childMeshes.filter(child => 
+                    child.geometry && child.isEnabled() && !child.isDisposed()
+                );
+                
+                if (validChildren.length > 0) {
+                    console.log(`👶 子メッシュを使用してバウンディングボックス計算 [${mesh.name}]:`, 
+                        validChildren.map(c => c.name));
+                    
+                    // 有効な子メッシュの最初のものを使用
+                    boundingInfo = validChildren[0].getBoundingInfo();
+                    usedChildMesh = true;
+                }
+            }
+            
+            // 子メッシュが使用できない場合はメインメッシュを使用
+            if (!boundingInfo) {
+                boundingInfo = mesh.getBoundingInfo();
+            }
             
             if (!boundingInfo || !boundingInfo.boundingBox) {
                 console.warn(`⚠️ バウンディングボックスが取得できません: ${mesh.name}`);
-                console.warn(`メッシュ詳細:`, {
-                    name: mesh.name,
-                    position: mesh.position.toString(),
-                    hasGeometry: !!mesh.geometry,
-                    childCount: childMeshes.length,
-                    isEnabled: mesh.isEnabled()
-                });
+                console.warn(`フォールバック使用: スケールベースの高さ推定`);
                 
-                // フォールバック: デフォルトオフセットを使用
-                mesh.position.y = position.y + 0.05;
+                // フォールバック: スケール情報から高さを推定
+                const scale = mesh.scaling;
+                const estimatedHeight = scale.y * 2.0; // 推定高さ（スケールの2倍）
+                mesh.position.y = position.y + estimatedHeight / 2;
+                
+                console.log(`📏 スケールベース配置 [${mesh.name}]: 推定高さ=${estimatedHeight.toFixed(3)}, Y=${mesh.position.y.toFixed(3)}`);
                 return;
             }
             
@@ -247,7 +305,37 @@ export class AssetPlacer {
             const maxY = boundingBox.maximumWorld.y;
             const height = maxY - minY;
             
+            // 異常に小さいバウンディングボックスの検出
+            if (height < 0.01) {
+                console.warn(`⚠️ バウンディングボックスが異常に小さい [${mesh.name}]: height=${height.toFixed(6)}`);
+                
+                if (usedChildMesh) {
+                    console.log(`🔄 全子メッシュのバウンディングボックスを調査中...`);
+                    
+                    // 全子メッシュのバウンディングボックスを調査
+                    childMeshes.forEach((child, index) => {
+                        const childBounding = child.getBoundingInfo();
+                        if (childBounding && childBounding.boundingBox) {
+                            const childMin = childBounding.boundingBox.minimumWorld.y;
+                            const childMax = childBounding.boundingBox.maximumWorld.y;
+                            const childHeight = childMax - childMin;
+                            
+                            console.log(`  子メッシュ[${index}] ${child.name}: height=${childHeight.toFixed(6)}, minY=${childMin.toFixed(3)}, maxY=${childMax.toFixed(3)}`);
+                        }
+                    });
+                }
+                
+                // フォールバック: スケールベースの配置
+                const scale = mesh.scaling;
+                const estimatedHeight = scale.y * 1.0; // スケールから推定
+                mesh.position.y = position.y + estimatedHeight / 2;
+                
+                console.log(`📏 フォールバック配置 [${mesh.name}]: スケール=${scale.y.toFixed(3)}, 推定高さ=${estimatedHeight.toFixed(3)}`);
+                return;
+            }
+            
             console.log(`📦 バウンディングボックス情報 [${mesh.name}]:`, {
+                source: usedChildMesh ? 'child-mesh' : 'main-mesh',
                 minY: minY.toFixed(3),
                 maxY: maxY.toFixed(3),
                 height: height.toFixed(3),
@@ -256,7 +344,6 @@ export class AssetPlacer {
             });
             
             // 床面からの正しい位置を計算
-            // メッシュの位置 - バウンディングボックスの最下点 + 目標の床面
             const offsetFromMeshToBottom = mesh.position.y - minY;
             const newY = position.y + offsetFromMeshToBottom + 0.001; // 1mm浮かす
             
@@ -265,15 +352,7 @@ export class AssetPlacer {
             console.log(`✅ アセット配置完了 [${mesh.name}]: Y=${newY.toFixed(3)} (offset: ${offsetFromMeshToBottom.toFixed(3)})`);
             
         } catch (error) {
-            console.error(`❌ アセット配置エラー [${mesh.name}]:`, error);
-            console.error(`エラー詳細:`, {
-                meshName: mesh.name,
-                hasPosition: !!mesh.position,
-                hasParent: !!mesh.parent,
-                isDisposed: mesh.isDisposed()
-            });
-            
-            // エラー時のフォールバック
+            console.error(`❌ バウンディングボックス計算エラー [${mesh.name}]:`, error);
             mesh.position.y = position.y + 0.05;
         }
     }
@@ -360,9 +439,13 @@ export class AssetPlacer {
                 childMesh.alwaysSelectAsActiveMesh = true;
                 childMesh.cullingStrategy = BABYLON.AbstractMesh.CULLINGSTRATEGY_OPTIMISTIC_INCLUSION;
                 
-                // 親メッシュへの参照を設定
-                childMesh.metadata = childMesh.metadata || {};
-                childMesh.metadata.parentAsset = mesh;
+                // 親メッシュへの参照を設定（強制的に新しいメタデータオブジェクトを作成）
+                childMesh.metadata = {
+                    parentAsset: mesh,
+                    isChildMesh: true,
+                    parentName: mesh.name,
+                    childIndex: childMeshes.indexOf(childMesh)
+                };
                 
                 // 子メッシュのマテリアル設定
                 if (childMesh.material) {
@@ -374,12 +457,37 @@ export class AssetPlacer {
             });
         }
         
-        // メッシュのメタデータを設定
-        mesh.metadata = mesh.metadata || {};
-        mesh.metadata.isAsset = true;
-        mesh.metadata.canMove = true;
+        // メッシュのメタデータを設定（強制的に新しいオブジェクトを作成）
+        mesh.metadata = {
+            isAsset: true,
+            canMove: true,
+            assetName: mesh.name,
+            placementTime: Date.now(),
+            childCount: childMeshes.length
+        };
         
-        console.log(`Mesh interaction setup complete for ${mesh.name} (pickable: ${mesh.isPickable}, children: ${childMeshes.length})`);
+        // 詳細な選択可能性の調査
+        console.log(`🎯 メッシュ選択設定完了 [${mesh.name}]:`, {
+            mainMeshPickable: mesh.isPickable,
+            mainMeshEnabled: mesh.isEnabled(),
+            mainMeshVisible: mesh.visibility,
+            childCount: childMeshes.length,
+            childPickableCount: childMeshes.filter(c => c.isPickable).length,
+            hasGeometry: !!mesh.geometry,
+            hasParent: !!mesh.parent,
+            metadata: {
+                isAsset: mesh.metadata?.isAsset,
+                canMove: mesh.metadata?.canMove
+            }
+        });
+        
+        // 子メッシュの詳細情報
+        if (childMeshes.length > 0) {
+            console.log(`👶 子メッシュ詳細 [${mesh.name}]:`);
+            childMeshes.forEach((child, index) => {
+                console.log(`  [${index}] ${child.name}: pickable=${child.isPickable}, enabled=${child.isEnabled()}, visible=${child.visibility}, hasGeometry=${!!child.geometry}`);
+            });
+        }
     }
 
     /**

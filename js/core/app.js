@@ -15,6 +15,7 @@ import { InteractionManager } from '../interaction/interaction-manager.js';
 import { UIManager } from '../ui/ui-manager.js';
 import { SelectionController } from '../interaction/selection-controller.js';
 import { LoadingManager } from '../ui/loading-manager.js';
+import { EnvironmentManager } from '../environment/environment-manager.js';
 
 export class App {
     constructor(canvas) {
@@ -60,6 +61,7 @@ export class App {
             );
             this.managers.interaction = new InteractionManager(this, errorHandler);
             this.managers.ui = new UIManager(this, errorHandler);
+            this.managers.environment = new EnvironmentManager(scene, errorHandler);
             this.loadingManager.setProgress(40);
 
             // 環境をセットアップ
@@ -134,6 +136,11 @@ export class App {
             
             // AssetPlacerにシャドウジェネレーターを設定
             this.managers.assetPlacer.setShadowGenerator(this.managers.lighting.getShadowGenerator());
+            
+            // 環境装飾オブジェクト（木、建物など）を作成
+            this.loadingManager.updateMessage("環境装飾オブジェクトを作成中...");
+            this.managers.environment.initialize();
+            this.managers.environment.setShadowGenerator(this.managers.lighting.getShadowGenerator());
             
             // カメラをセットアップ
             this.managers.camera.setupDefaultCamera();

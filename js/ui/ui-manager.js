@@ -3,7 +3,7 @@
  * ユーザーインターフェースを管理するクラス
  */
 
-import { ASSET_TYPES } from '../config/constants.js';
+import { ASSET_TYPES, BACKGROUND_360_SETTINGS } from '../config/constants.js';
 import { color3ToHex } from '../utils/color-utils.js';
 
 export class UIManager {
@@ -897,6 +897,7 @@ const cameraSettings = {
         // 選択を解除
         this.app.getManager('selection').deselectAll();
     }
+
 
     /**
      * クリーンアップ
