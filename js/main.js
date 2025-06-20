@@ -11,6 +11,9 @@ window.app = null;
 // パフォーマンス監視のインターバルID
 let performanceMonitorInterval = null;
 
+// ソースコード最終更新日時（手動で更新）
+const SOURCE_LAST_UPDATED = '2025/06/20 22:45';
+
 /**
  * アプリケーションを起動
  */
@@ -87,6 +90,14 @@ function showStartupError(message) {
 }
 
 /**
+ * ソースコード更新日時を取得
+ * @returns {string} 更新日時の文字列
+ */
+function getSourceUpdateTime() {
+    return SOURCE_LAST_UPDATED;
+}
+
+/**
  * パフォーマンス監視を開始（開発用）
  * @param {App} app - アプリケーションインスタンス
  */
@@ -123,7 +134,9 @@ function startPerformanceMonitoring(app) {
                     Active Meshes: ${stats.activeMeshes}<br>
                     Total Meshes: ${stats.totalMeshes}<br>
                     Vertices: ${stats.totalVertices.toLocaleString()}<br>
-                    Draw Calls: ${stats.drawCalls}
+                    Draw Calls: ${stats.drawCalls}<br>
+                    <hr style="margin: 5px 0; border-color: #333;">
+                    Source Updated: ${getSourceUpdateTime()}
                 `;
             }
         } catch (error) {

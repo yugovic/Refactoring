@@ -49,6 +49,7 @@ export class VehicleManager {
         this.modal = null;
         this.isLoading = false;
         this.previewMesh = null; // プレビュー用メッシュ
+        this.vehicleScale = 0.1; // デフォルトスケール 10%
     }
 
     /**
@@ -125,11 +126,17 @@ export class VehicleManager {
         return new Promise((resolve, reject) => {
             BABYLON.SceneLoader.ImportMesh(
                 "", 
-                "assets/", 
+                "assets/Cars/", 
                 vehicle.fileName, 
                 this.scene,
                 (meshes) => {
                     console.log(`Vehicle ${vehicle.displayName} meshes loaded:`, meshes.length);
+                    console.log('Loaded meshes:', meshes.map(mesh => ({
+                        name: mesh.name,
+                        id: mesh.id,
+                        position: mesh.position,
+                        scaling: mesh.scaling
+                    })));
                     
                     if (meshes.length > 0) {
                         const rootMesh = meshes[0];
@@ -138,6 +145,9 @@ export class VehicleManager {
                         // メッシュプロパティを設定
                         rootMesh.isPickable = true;
                         rootMesh.checkCollisions = true;
+                        
+                        // デフォルトスケールを適用
+                        rootMesh.scaling = new BABYLON.Vector3(this.vehicleScale, this.vehicleScale, this.vehicleScale);
                         
                         resolve(rootMesh);
                     } else {
@@ -179,9 +189,6 @@ export class VehicleManager {
             if (mesh) {
                 // ロードしたメッシュを使用
                 this.currentVehicleMesh = mesh;
-                
-                // 10%サイズに設定
-                this.currentVehicleMesh.scaling = new BABYLON.Vector3(0.1, 0.1, 0.1);
                 
                 // 車両を非表示にしておく（配置時まで）
                 this.currentVehicleMesh.setEnabled(false);
@@ -252,6 +259,9 @@ export class VehicleManager {
             // 位置を設定
             clonedMesh.position = position.clone();
             
+            // スケールを設定
+            clonedMesh.scaling = new BABYLON.Vector3(this.vehicleScale, this.vehicleScale, this.vehicleScale);
+            
             // メッシュを有効化
             clonedMesh.setEnabled(true);
             
@@ -259,10 +269,28 @@ export class VehicleManager {
             clonedMesh.metadata = {
                 type: 'vehicle',
                 vehicleType: this.selectedVehicle.name,
-                originalScale: 0.1,
+                originalScale: this.vehicleScale,
                 isPlacedAsset: true,
-                isVehicle: true
+                isVehicle: true,
+                isAsset: true,
+                placementTime: Date.now()
             };
+
+            // 子メッシュにも親アセットの参照を設定
+            if (clonedMesh.getChildMeshes) {
+                const childMeshes = clonedMesh.getChildMeshes();
+                childMeshes.forEach(child => {
+                    child.metadata = {
+                        ...child.metadata,
+                        parentAsset: clonedMesh,
+                        isPartOfVehicle: true,
+                        isPartOfAsset: true  // この行を追加
+                    };
+                    // 子メッシュも選択可能にする
+                    child.isPickable = true;
+                });
+                console.log(`Set parentAsset metadata for ${childMeshes.length} child meshes`);
+            }
 
             // 配置済み車両として保存
             this.placedVehicleMesh = clonedMesh;
@@ -291,13 +319,19 @@ export class VehicleManager {
         // プレビューメッシュを作成
         this.previewMesh = this.currentVehicleMesh.clone(`preview_vehicle_${this.selectedVehicle.name}`);
         this.previewMesh.position = position.clone();
+        this.previewMesh.scaling = new BABYLON.Vector3(this.vehicleScale, this.vehicleScale, this.vehicleScale);
         this.previewMesh.setEnabled(true);
 
         // プレビュー用に半透明にする
         this.makePreviewTransparent(this.previewMesh);
         
-        // ピッキング無効
+        // ピッキング無効（子メッシュも含む）
         this.previewMesh.isPickable = false;
+        if (this.previewMesh.getChildMeshes) {
+            this.previewMesh.getChildMeshes().forEach(child => {
+                child.isPickable = false;
+            });
+        }
     }
 
     /**
@@ -397,6 +431,38 @@ export class VehicleManager {
         
         this.selectedVehicle = null;
         this.updateVehicleInfo();
+    }
+
+    /**
+     * 車両のスケールを設定
+     * @param {number} scale 
+     */
+    setVehicleScale(scale) {
+        this.vehicleScale = scale;
+        
+        // 現在の車両メッシュのスケールを更新
+        if (this.currentVehicleMesh) {
+            this.currentVehicleMesh.scaling = new BABYLON.Vector3(scale, scale, scale);
+        }
+        
+        // 配置済み車両のスケールを更新
+        if (this.placedVehicleMesh) {
+            this.placedVehicleMesh.scaling = new BABYLON.Vector3(scale, scale, scale);
+            this.placedVehicleMesh.metadata.originalScale = scale;
+        }
+        
+        // プレビューメッシュのスケールを更新
+        if (this.previewMesh) {
+            this.previewMesh.scaling = new BABYLON.Vector3(scale, scale, scale);
+        }
+    }
+    
+    /**
+     * 現在の車両スケールを取得
+     * @returns {number}
+     */
+    getVehicleScale() {
+        return this.vehicleScale;
     }
 
     /**

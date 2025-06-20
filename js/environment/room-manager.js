@@ -112,6 +112,8 @@ export class RoomManager {
             } else if (meshNameLower.includes('wall') || 
                        meshNameLower.includes('壁')) {
                 this.setupWallMesh(mesh);
+            } else if (meshNameLower.includes('seatsurface') && meshNameLower.includes('placeable')) {
+                this.setupPlaceableSurface(mesh);
             }
             
             // 子メッシュも処理
@@ -140,6 +142,8 @@ export class RoomManager {
             this.setupFloorMesh(mesh);
         } else if (meshNameLower.includes('wall')) {
             this.setupWallMesh(mesh);
+        } else if (meshNameLower.includes('seatsurface') && meshNameLower.includes('placeable')) {
+            this.setupPlaceableSurface(mesh);
         }
         
         // デフォルトの設定
@@ -185,6 +189,26 @@ export class RoomManager {
             mesh.material.alpha = 0.8;
             mesh.material.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND;
         }
+        
+        this.shadowReceivers.push(mesh);
+    }
+    
+    /**
+     * 配置可能サーフェスをセットアップ
+     * @param {BABYLON.Mesh} mesh - 配置可能サーフェスメッシュ
+     */
+    setupPlaceableSurface(mesh) {
+        console.log(`Setting up placeable surface: ${mesh.name}`);
+        
+        mesh.metadata = { 
+            isPlaceableSurface: true,
+            placeableType: 'seat_surface'
+        };
+        mesh.receiveShadows = true;
+        mesh.checkCollisions = false; // 配置可能サーフェスはコリジョンチェックしない
+        
+        // インタラクション用のタグを設定
+        mesh.metadata.interactionTag = 'placeable_surface';
         
         this.shadowReceivers.push(mesh);
     }

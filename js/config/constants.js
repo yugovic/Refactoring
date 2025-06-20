@@ -9,8 +9,10 @@ export const ASSET_URLS = {
     BURGER: "./assets/Burger.glb",
     RECORD_MACHINE: "./assets/RecordMachine.glb",
     JUICE_BOX: "./assets/juice_boxv3.glb",
+    TROPHY: "./assets/Basic/TrophyFree.glb",
     BACKGROUND_360: "./assets/BackGroundTest360",
-    FLARE_TEXTURE: "https://assets.babylonjs.com/textures/flare.png"
+    FLARE_TEXTURE: "https://assets.babylonjs.com/textures/flare.png",
+    BACKGROUND_MUSIC: "./assets/Music/Cruise_by_the_Sea.mp3"
 };
 
 // 360度背景設定
@@ -34,6 +36,7 @@ export const ASSET_TYPES = {
     RECORD_MACHINE: 'recordMachine',   // レコードマシン
     JUICE_BOX: 'juiceBox',
     MIKE_DESK: 'mikeDesk',
+    TROPHY: 'trophy',   // トロフィー
     // 環境装飾オブジェクト
     TREE: 'tree',
     BUILDING: 'building'
@@ -45,6 +48,7 @@ export const MODEL_SCALES = {
     BURGER: { x: 0.1, y: 0.1, z: 0.1 },         // バーガーのスケール (10%)
     RECORD_MACHINE: { x: 0.1, y: 0.1, z: 0.1 }, // レコードマシンのスケール (10%)
     JUICE_BOX: { x: 0.1, y: 0.1, z: 0.1 },      // ジュースボックスのスケール (10%)
+    TROPHY: { x: 0.1, y: 0.1, z: 0.1 },         // トロフィーのスケール (10%)
     DEFAULT: { x: 0.1, y: 0.1, z: 0.1 }         // デフォルトスケール (10%)
 };
 

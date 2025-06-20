@@ -18,6 +18,8 @@ import { LoadingManager } from '../ui/loading-manager.js';
 import { EnvironmentManager } from '../environment/environment-manager.js';
 import { UploadManager } from '../assets/upload-manager.js';
 import { VehicleManager } from '../assets/vehicle-manager.js';
+import { AudioManager } from '../audio/audio-manager.js';
+import { BoundingBoxDebug } from '../debug/bounding-box-debug.js';
 
 export class App {
     constructor(canvas) {
@@ -80,6 +82,13 @@ export class App {
             
             // 車両マネージャーを初期化
             this.managers.vehicle.initialize();
+            
+            // オーディオマネージャーを初期化
+            this.managers.audio = new AudioManager(this.managers.scene.getScene(), this.managers.scene.getErrorHandler());
+            this.managers.audio.initialize();
+            
+            // バウンディングボックスデバッグを初期化
+            this.managers.boundingBoxDebug = new BoundingBoxDebug(this.managers.scene.getScene());
             
             // スケール設定を復元
             this.managers.assetPlacer.loadScaleSettings();

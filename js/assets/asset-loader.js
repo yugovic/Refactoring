@@ -40,7 +40,8 @@ export class AssetLoader {
             await Promise.all([
                 this.loadBurgerModel(),
                 this.loadRecordModel(),
-                this.loadJuiceBoxModel()
+                this.loadJuiceBoxModel(),
+                this.loadTrophyModel()
             ]);
             
             console.log("All assets preloaded successfully");
@@ -157,6 +158,42 @@ export class AssetLoader {
                 (_, message) => {
                     this.loadingStatus.juiceBox = false;
                     reject(new Error("Failed to load juice box model: " + message));
+                }
+            );
+        });
+    }
+
+    /**
+     * トロフィーモデルをロード
+     * @returns {Promise<void>}
+     */
+    async loadTrophyModel() {
+        if (this.loadingStatus.trophy || this.preloadedModels.trophy) return;
+        
+        this.loadingStatus.trophy = true;
+        
+        return new Promise((resolve, reject) => {
+            BABYLON.SceneLoader.ImportMesh(
+                "", 
+                ASSET_URLS.TROPHY, 
+                "", 
+                this.scene,
+                (meshes) => {
+                    console.log("Trophy model preloaded:", meshes.length + " meshes");
+                    
+                    if (meshes.length > 0) {
+                        const rootMesh = this.prepareMesh(meshes[0], MODEL_SCALES.TROPHY);
+                        this.setupMeshProperties(rootMesh);
+                        this.preloadedModels.trophy = rootMesh;
+                    }
+                    
+                    this.loadingStatus.trophy = false;
+                    resolve();
+                },
+                null,
+                (_, message) => {
+                    this.loadingStatus.trophy = false;
+                    reject(new Error("Failed to load trophy model: " + message));
                 }
             );
         });

@@ -334,6 +334,17 @@ export class UIManager {
                 gridSystem.setSnapToGrid(e.target.checked);
             });
         }
+        
+        // バウンディングボックス表示
+        const boundingBoxCheck = document.getElementById('showBoundingBoxCheck');
+        if (boundingBoxCheck) {
+            boundingBoxCheck.addEventListener("change", (e) => {
+                const boundingBoxDebug = this.app.getManager('boundingBoxDebug');
+                if (boundingBoxDebug) {
+                    boundingBoxDebug.setEnabled(e.target.checked);
+                }
+            });
+        }
     }
 
     /**

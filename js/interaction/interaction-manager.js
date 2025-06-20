@@ -137,11 +137,11 @@ export class InteractionManager {
     async handlePlacement(_pickResult) {
         console.log("=== 配置処理開始 ===");
         
-        // マウス位置でピッキングを実行（プレビューと同じ方法）
+        // マウス位置でピッキングを実行（プレビューメッシュを除外）
         const pickInfo = this.scene.pick(
             this.scene.pointerX,
             this.scene.pointerY,
-            null,
+            (mesh) => !mesh.name.startsWith('preview_'), // プレビューメッシュを除外
             false,
             this.camera.getActiveCamera()
         );
@@ -152,23 +152,71 @@ export class InteractionManager {
             return;
         }
         
+        // 配置済みアセットの子メッシュをチェック
+        let targetMesh = pickInfo.pickedMesh;
+        if (targetMesh.metadata && (targetMesh.metadata.isPartOfAsset || targetMesh.metadata.parentAsset)) {
+            console.log("配置済みアセットの子メッシュを検出。床を再ピックします。");
+            // 配置済みアセットを無視して再度レイキャスト
+            const ray = this.scene.createPickingRay(
+                this.scene.pointerX,
+                this.scene.pointerY,
+                BABYLON.Matrix.Identity(),
+                this.camera.getActiveCamera()
+            );
+            
+            const predicate = (mesh) => {
+                // 配置済みアセットとその子メッシュを除外
+                return !mesh.metadata?.isAsset && 
+                       !mesh.metadata?.isPartOfAsset && 
+                       !mesh.metadata?.parentAsset &&
+                       mesh.isPickable &&
+                       mesh.isVisible;
+            };
+            
+            pickInfo = this.scene.pickWithRay(ray, predicate);
+            
+            if (!pickInfo.hit || !pickInfo.pickedPoint) {
+                console.log("エラー: 床の再ピッキングに失敗しました");
+                this.errorHandler.showError("配置できません。床または壁をクリックしてください。");
+                return;
+            }
+            targetMesh = pickInfo.pickedMesh;
+        }
+        
         // 配置可能な場所かチェック
-        const meshName = pickInfo.pickedMesh.name.toLowerCase();
-        const isFloor = meshName.includes("floor") || meshName.includes("body") || 
-                       (pickInfo.pickedMesh.metadata && pickInfo.pickedMesh.metadata.isFloor);
+        const meshName = targetMesh.name.toLowerCase();
+        const isFloor = meshName.includes("floor") || 
+                       meshName.includes("ground") ||
+                       (targetMesh.metadata && targetMesh.metadata.isFloor);
         const isWall = meshName.includes("wall");
+        const isPlaceableSurface = targetMesh.metadata && targetMesh.metadata.isPlaceableSurface;
         
         console.log("ピッキング結果:", {
-            meshName: pickInfo.pickedMesh.name,
+            meshName: targetMesh.name,
+            meshNameLower: meshName,
             isFloor,
             isWall,
-            position: pickInfo.pickedPoint.toString()
+            isPlaceableSurface,
+            position: pickInfo.pickedPoint.toString(),
+            metadata: targetMesh.metadata,
+            parentName: targetMesh.parent?.name,
+            meshId: targetMesh.id
         });
         
-        if (!isFloor && !isWall) {
-            console.log("エラー: 配置不可能な場所です");
-            this.errorHandler.showError("配置できません。床または壁をクリックしてください。");
-            return;
+        // 車両配置モードの場合は床のみチェック
+        if (this.currentMode === 'vehicle') {
+            if (!isFloor) {
+                console.log("エラー: 車両は床にのみ配置できます。メッシュ名:", meshName);
+                this.errorHandler.showError("車両は床にのみ配置できます。床をクリックしてください。");
+                return;
+            }
+        } else {
+            // 通常のアセット配置の場合
+            if (!isFloor && !isWall && !isPlaceableSurface) {
+                console.log("エラー: 配置不可能な場所です");
+                this.errorHandler.showError("配置できません。床、壁、または配置可能なサーフェスをクリックしてください。");
+                return;
+            }
         }
         
         console.log("ヒットしたオブジェクト:", {
@@ -207,26 +255,43 @@ export class InteractionManager {
         const isWallPlacement = Math.abs(normal.y) < 0.7;
         console.log(`配置タイプ: ${isWallPlacement ? '壁' : '床'}`);
         
-        // AssetPlacerに壁の法線を設定
-        if (isWallPlacement) {
-            this.assetPlacer.setWallNormal(normal);
+        // 車両配置モードの場合は特別な処理
+        if (this.currentMode === 'vehicle') {
+            // 車両は必ず床に配置（Y座標を固定）
+            console.log(`車両配置: Y座標調整前 -> ${hitPoint.y}`);
+            hitPoint.y = 0.01; // 床の高さに固定
+            console.log(`車両配置: Y座標調整後 -> ${hitPoint.y}`);
+        } else {
+            // AssetPlacerに壁の法線を設定
+            if (isWallPlacement) {
+                this.assetPlacer.setWallNormal(normal);
+            }
+            
+            // 位置を調整
+            if (isWallPlacement) {
+                const offset = 0.1;  // 壁から少し離す
+                console.log(`壁配置: オフセット適用前 -> ${hitPoint.toString()}`);
+                hitPoint.x += normal.x * offset;
+                hitPoint.z += normal.z * offset;
+                
+                // 壁の高さを調整（床から1.2m上）
+                hitPoint.y = 1.2;
+                console.log(`壁配置: オフセット適用後 -> ${hitPoint.toString()}`);
+            } else {
+                // 床配置の場合は少し上に配置
+                console.log(`床配置: Y座標調整前 -> ${hitPoint.y}`);
+                hitPoint.y += 0.01;
+                console.log(`床配置: Y座標調整後 -> ${hitPoint.y}`);
+            }
         }
         
-        // 位置を調整
-        if (isWallPlacement) {
-            const offset = 0.1;  // 壁から少し離す
-            console.log(`壁配置: オフセット適用前 -> ${hitPoint.toString()}`);
-            hitPoint.x += normal.x * offset;
-            hitPoint.z += normal.z * offset;
-            
-            // 壁の高さを調整（床から1.2m上）
-            hitPoint.y = 1.2;
-            console.log(`壁配置: オフセット適用後 -> ${hitPoint.toString()}`);
-        } else {
-            // 床配置の場合は少し上に配置
-            console.log(`床配置: Y座標調整前 -> ${hitPoint.y}`);
-            hitPoint.y += 0.01;
-            console.log(`床配置: Y座標調整後 -> ${hitPoint.y}`);
+        // 境界チェック
+        const boundary = await import('../config/constants.js').then(m => m.ROOM_BOUNDARY);
+        if (hitPoint.x < boundary.MIN_X || hitPoint.x > boundary.MAX_X ||
+            hitPoint.z < boundary.MIN_Z || hitPoint.z > boundary.MAX_Z) {
+            console.error("配置位置が部屋の境界外です:", hitPoint.toString());
+            this.errorHandler.showError("配置位置が部屋の外です。部屋の中に配置してください。");
+            return;
         }
         
         console.log("=== アセット配置実行 ===");
@@ -408,7 +473,7 @@ export class InteractionManager {
         const pickInfo = this.scene.pick(
             this.scene.pointerX,
             this.scene.pointerY,
-            null,
+            null, // プレビュー時はフィルターなし（より寛容なピッキング）
             false,
             this.camera.getActiveCamera()
         );
@@ -418,13 +483,20 @@ export class InteractionManager {
             return;
         }
         
-        // 配置可能な場所かチェック
+        // プレビューメッシュがピッキングされた場合は、プレビューを維持
         const meshName = pickInfo.pickedMesh.name.toLowerCase();
-        const isFloor = meshName.includes("floor") || meshName.includes("body") || 
+        if (meshName.startsWith('preview_')) {
+            return;
+        }
+        
+        // 配置可能な場所かチェック
+        const isFloor = meshName.includes("floor") || 
+                       meshName.includes("ground") ||
                        (pickInfo.pickedMesh.metadata && pickInfo.pickedMesh.metadata.isFloor);
         const isWall = meshName.includes("wall");
+        const isPlaceableSurface = pickInfo.pickedMesh.metadata && pickInfo.pickedMesh.metadata.isPlaceableSurface;
         
-        if (!isFloor && !isWall) {
+        if (!isFloor && !isWall && !isPlaceableSurface) {
             this.hidePreview();
             return;
         }
@@ -453,12 +525,15 @@ export class InteractionManager {
                 return;
             }
             
-            // 床配置用の位置調整
-            position.y += 0.01;
+            // 床配置用の位置調整（Y座標を固定）
+            position.y = 0.01;
             
-            // 車両プレビューを表示
-            const vehicleManager = this.app.getManager('vehicle');
-            vehicleManager.showPreview(position);
+            // 統合プレビューシステムを使用
+            await this.showPreview(position, null);
+            
+            // 垂直ヘルパーを表示
+            const color = this.getPreviewColor();
+            this.gridSystem.showVerticalHelper(position, color);
             return;
         }
         
@@ -571,6 +646,18 @@ export class InteractionManager {
                 mesh.material = material;
                 break;
                 
+            case ASSET_TYPES.TROPHY:
+                if (this.app.getManager('assetLoader').isModelAvailable('trophy')) {
+                    mesh = this.app.getManager('assetLoader').cloneModel('trophy', 'preview_trophy');
+                    if (mesh) {
+                        mesh.setEnabled(true);
+                        this.makeTransparent(mesh);
+                    }
+                } else {
+                    mesh = this.createSimplePreview(new BABYLON.Color3(0.8, 0.7, 0.1)); // 金色
+                }
+                break;
+                
             case 'uploaded_asset':
                 // アップロードアセットのプレビュー
                 const activeAssetId = this.uploadManager.getActiveAssetId();
@@ -596,6 +683,20 @@ export class InteractionManager {
                     }
                 } else {
                     mesh = this.createSimplePreview(new BABYLON.Color3(0.7, 0.5, 0.3));
+                }
+                break;
+                
+            case 'vehicle':
+                // 車両プレビュー
+                const vehicleManager = this.app.getManager('vehicle');
+                if (vehicleManager && vehicleManager.getCurrentVehicleMesh()) {
+                    const currentVehicle = vehicleManager.getCurrentVehicleMesh();
+                    mesh = currentVehicle.clone(`preview_vehicle_${vehicleManager.getSelectedVehicle().name}`);
+                    mesh.setEnabled(true);
+                    this.makeTransparent(mesh);
+                } else {
+                    // 車両が選択されていない場合はシンプルなプレビュー
+                    mesh = this.createSimplePreview(new BABYLON.Color3(0.5, 0.5, 0.7));
                 }
                 break;
         }
@@ -689,6 +790,8 @@ export class InteractionManager {
                 return PRESET_COLORS.MIKE_DESK;
             case 'uploaded_asset':
                 return new BABYLON.Color3(0.7, 0.5, 0.3);
+            case 'vehicle':
+                return new BABYLON.Color3(0.5, 0.5, 0.7);
             default:
                 return new BABYLON.Color3(0, 0.7, 1);
         }
@@ -744,11 +847,7 @@ export class InteractionManager {
         this.cleanupPreview();
         this.gridSystem.hideVerticalHelper();
         
-        // 車両プレビューもクリーンアップ
-        const vehicleManager = this.app.getManager('vehicle');
-        if (vehicleManager) {
-            vehicleManager.hidePreview();
-        }
+        // 車両プレビューは統合システムでクリーンアップされるため、個別の処理は不要
         
         // アップロードマネージャーの配置モードもリセット
         if (this.uploadManager) {

@@ -19,11 +19,11 @@ export const DEFAULT_SETTINGS = {
     // ライティング設定
     lighting: {
         ambient: {
-            intensity: 0.8,
+            intensity: 1.0,
             color: '#b3ccff'
         },
         directional: {
-            intensity: 0.6,
+            intensity: 1.0,
             position: { x: -20, y: 40, z: -20 }
         },
         pointLight1: {

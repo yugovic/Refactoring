@@ -21,14 +21,6 @@ export class AssetPlacer {
         // シャドウジェネレーターの参照
         this.shadowGenerator = null;
         
-        // アセットタイプ別のデフォルトスケール
-        this.defaultScales = {
-            [ASSET_TYPES.CUBE]: 1.0,
-            [ASSET_TYPES.RECORD_MACHINE]: 1.0,
-            [ASSET_TYPES.JUICE_BOX]: 1.0,
-            [ASSET_TYPES.MIKE_DESK]: 1.0
-        };
-        
         // アップロードアセット用のデフォルトスケール
         this.uploadedAssetScales = new Map();
     }
@@ -66,18 +58,15 @@ export class AssetPlacer {
                 case ASSET_TYPES.MIKE_DESK:
                     mesh = this.placeMikeDesk(position);
                     break;
+                case ASSET_TYPES.TROPHY:
+                    mesh = this.placeTrophy(position);
+                    break;
                 default:
                     this.errorHandler.showError(`Unknown asset type: ${assetType}`);
                     return null;
             }
             
             if (mesh) {
-                // スケールを適用
-                const scale = this.defaultScales[assetType];
-                if (scale !== undefined) {
-                    mesh.scaling = new BABYLON.Vector3(scale, scale, scale);
-                }
-                
                 // 配置エフェクトを表示
                 this.showPlacementEffect(position, assetType);
                 
@@ -212,11 +201,44 @@ export class AssetPlacer {
         material.disableLighting = false;
         mesh.material = material;
         
+        // メタデータを設定
+        mesh.metadata = {
+            isAsset: true,
+            isPlacedAsset: true,
+            canMove: true,
+            assetType: ASSET_TYPES.MIKE_DESK,
+            placementTime: Date.now()
+        };
+        
         this.positionAssetOnFloor(mesh, position);
         this.applyWallRotation(mesh);
         this.setupMeshInteraction(mesh, ASSET_TYPES.MIKE_DESK);
         
         return mesh;
+    }
+
+    /**
+     * トロフィーを配置
+     * @param {BABYLON.Vector3} position - 配置位置
+     * @returns {BABYLON.Mesh|null}
+     */
+    placeTrophy(position) {
+        if (this.assetLoader.isModelAvailable('trophy')) {
+            const timestamp = Date.now();
+            const trophy = this.assetLoader.cloneModel('trophy', `trophy_${timestamp}`);
+            
+            if (trophy) {
+                this.positionAssetOnFloor(trophy, position);
+                this.applyWallRotation(trophy);
+                this.setupMeshInteraction(trophy, ASSET_TYPES.TROPHY);
+                this.createBoundingBox(trophy, timestamp);
+                return trophy;
+            }
+        } else {
+            this.loadAndPlaceAsset(ASSET_URLS.TROPHY, `trophy_${Date.now()}`, position);
+        }
+        
+        return null;
     }
 
     /**
@@ -461,6 +483,7 @@ export class AssetPlacer {
                 childMesh.metadata = {
                     parentAsset: mesh,
                     isChildMesh: true,
+                    isPartOfAsset: true,  // これを追加
                     parentName: mesh.name,
                     childIndex: childMeshes.indexOf(childMesh)
                 };
@@ -478,6 +501,7 @@ export class AssetPlacer {
         // メッシュのメタデータを設定（強制的に新しいオブジェクトを作成）
         mesh.metadata = {
             isAsset: true,
+            isPlacedAsset: true,  // これを追加
             canMove: true,
             assetName: mesh.name,
             assetType: assetType,
