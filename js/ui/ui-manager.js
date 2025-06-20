@@ -68,6 +68,7 @@ export class UIManager {
         this.elements.recordBtn = document.getElementById("recordBtn");
         this.elements.juiceBoxBtn = document.getElementById("juiceBoxBtn");
         this.elements.mikeDeskBtn = document.getElementById("mikeDeskBtn");
+        this.elements.trophyBtn = document.getElementById("trophyBtn");
         
         // アクションボタン
         this.elements.rotateBtn = document.getElementById("rotateBtn");
@@ -147,7 +148,9 @@ export class UIManager {
             juiceBoxSlider: document.getElementById("juiceBoxScaleSlider"),
             juiceBoxValue: document.getElementById("juiceBoxScaleValue"),
             mikeDeskSlider: document.getElementById("mikeDeskScaleSlider"),
-            mikeDeskValue: document.getElementById("mikeDeskScaleValue")
+            mikeDeskValue: document.getElementById("mikeDeskScaleValue"),
+            trophySlider: document.getElementById("trophyScaleSlider"),
+            trophyValue: document.getElementById("trophyScaleValue")
         };
         
         // 選択アセットスケール調整
@@ -158,6 +161,19 @@ export class UIManager {
             resetBtn: document.getElementById("resetScaleBtn"),
             halfBtn: document.getElementById("halfScaleBtn"),
             doubleBtn: document.getElementById("doubleScaleBtn")
+        };
+        
+        // 車両スケール調整
+        this.elements.vehicleScale = {
+            slider: document.getElementById("vehicleScaleSlider"),
+            value: document.getElementById("vehicleScaleValue")
+        };
+        
+        // 音楽コントロール
+        this.elements.music = {
+            toggleBtn: document.getElementById("toggleMusicBtn"),
+            volumeSlider: document.getElementById("volumeSlider"),
+            volumeValue: document.getElementById("volumeValue")
         };
     }
 
@@ -194,6 +210,12 @@ export class UIManager {
         
         // 選択アセットスケール調整
         this.setupSelectedAssetScaleControls();
+        
+        // 車両スケール調整
+        this.setupVehicleScaleControls();
+        
+        // 音楽コントロール
+        this.setupMusicControls();
     }
 
     /**
@@ -227,7 +249,8 @@ export class UIManager {
             { element: this.elements.cubeBtn, type: ASSET_TYPES.CUBE },
             { element: this.elements.recordBtn, type: ASSET_TYPES.RECORD_MACHINE },
             { element: this.elements.juiceBoxBtn, type: ASSET_TYPES.JUICE_BOX },
-            { element: this.elements.mikeDeskBtn, type: ASSET_TYPES.MIKE_DESK }
+            { element: this.elements.mikeDeskBtn, type: ASSET_TYPES.MIKE_DESK },
+            { element: this.elements.trophyBtn, type: ASSET_TYPES.TROPHY }
         ];
         
         buttons.forEach(({ element, type }) => {
@@ -573,6 +596,16 @@ export class UIManager {
                 assetPlacer.saveScaleSettings(); // 自動保存
             });
         }
+        
+        // トロフィー
+        if (this.elements.assetScale.trophySlider) {
+            this.elements.assetScale.trophySlider.addEventListener('input', (e) => {
+                const scale = parseFloat(e.target.value);
+                this.elements.assetScale.trophyValue.textContent = `${Math.round(scale * 100)}%`;
+                assetPlacer.updateAssetTypeScale(ASSET_TYPES.TROPHY, scale);
+                assetPlacer.saveScaleSettings(); // 自動保存
+            });
+        }
     }
 
     /**
@@ -600,9 +633,9 @@ export class UIManager {
             this.elements.selectedScale.resetBtn.addEventListener('click', () => {
                 const selectedMesh = selectionController.getSelectedMesh();
                 if (selectedMesh) {
-                    this.elements.selectedScale.slider.value = 1.0;
-                    this.elements.selectedScale.value.textContent = '100%';
-                    assetPlacer.updateMeshScale(selectedMesh, 1.0);
+                    this.elements.selectedScale.slider.value = 0.1;
+                    this.elements.selectedScale.value.textContent = '10%';
+                    assetPlacer.updateMeshScale(selectedMesh, 0.1);
                 }
             });
         }
@@ -624,9 +657,9 @@ export class UIManager {
             this.elements.selectedScale.doubleBtn.addEventListener('click', () => {
                 const selectedMesh = selectionController.getSelectedMesh();
                 if (selectedMesh) {
-                    this.elements.selectedScale.slider.value = 2.0;
-                    this.elements.selectedScale.value.textContent = '200%';
-                    assetPlacer.updateMeshScale(selectedMesh, 2.0);
+                    this.elements.selectedScale.slider.value = 1.0;
+                    this.elements.selectedScale.value.textContent = '100%';
+                    assetPlacer.updateMeshScale(selectedMesh, 1.0);
                 }
             });
         }
@@ -653,6 +686,51 @@ export class UIManager {
     hideSelectedAssetScaleUI() {
         if (this.elements.selectedScale.section) {
             this.elements.selectedScale.section.style.display = 'none';
+        }
+    }
+    
+    /**
+     * 車両スケール調整コントロールを設定
+     */
+    setupVehicleScaleControls() {
+        const vehicleManager = this.app.getManager('vehicle');
+        
+        if (this.elements.vehicleScale.slider) {
+            this.elements.vehicleScale.slider.addEventListener('input', (e) => {
+                const scale = parseFloat(e.target.value);
+                this.elements.vehicleScale.value.textContent = `${Math.round(scale * 100)}%`;
+                vehicleManager.setVehicleScale(scale);
+            });
+        }
+    }
+    
+    /**
+     * 音楽コントロールを設定
+     */
+    setupMusicControls() {
+        if (this.elements.music.toggleBtn) {
+            this.elements.music.toggleBtn.addEventListener('click', () => {
+                const audioManager = this.app.getManager('audio');
+                if (!audioManager) {
+                    console.error('AudioManager not available');
+                    return;
+                }
+                const isPlaying = audioManager.toggleBackgroundMusic();
+                this.elements.music.toggleBtn.textContent = isPlaying ? '⏸️ 音楽を停止' : '🎵 音楽を再生';
+            });
+        }
+        
+        if (this.elements.music.volumeSlider) {
+            this.elements.music.volumeSlider.addEventListener('input', (e) => {
+                const audioManager = this.app.getManager('audio');
+                if (!audioManager) {
+                    console.error('AudioManager not available');
+                    return;
+                }
+                const volume = parseFloat(e.target.value);
+                audioManager.setVolume(volume);
+                this.elements.music.volumeValue.textContent = `${Math.round(volume * 100)}%`;
+            });
         }
     }
     
@@ -685,6 +763,12 @@ export class UIManager {
             this.elements.assetScale.mikeDeskValue.textContent = `${Math.round(defaultScales[ASSET_TYPES.MIKE_DESK] * 100)}%`;
         }
         
+        // トロフィースライダーを更新
+        if (this.elements.assetScale.trophySlider && defaultScales[ASSET_TYPES.TROPHY] !== undefined) {
+            this.elements.assetScale.trophySlider.value = defaultScales[ASSET_TYPES.TROPHY];
+            this.elements.assetScale.trophyValue.textContent = `${Math.round(defaultScales[ASSET_TYPES.TROPHY] * 100)}%`;
+        }
+        
         console.log('スケールスライダーを更新しました:', defaultScales);
     }
 
@@ -715,6 +799,14 @@ export class UIManager {
         
         // カメラ設定
         this.updateCameraDebugControls();
+        
+        // 音楽設定
+        if (this.elements.music.volumeSlider) {
+            this.elements.music.volumeSlider.value = 0.1;
+        }
+        if (this.elements.music.volumeValue) {
+            this.elements.music.volumeValue.textContent = '10%';
+        }
     }
 
     /**

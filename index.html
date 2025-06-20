@@ -74,6 +74,7 @@
             <button id="recordBtn">レコードマシンを配置</button>
             <button id="juiceBoxBtn">ジュースボックスを配置</button>
             <button id="mikeDeskBtn">マイクデスクを配置</button>
+            <button id="trophyBtn">トロフィーを配置</button>
         </div>
         
         <!-- アセットサイズ調整 -->
@@ -81,21 +82,34 @@
             <h4>アセットサイズ調整</h4>
             <div class="default-scale-controls">
                 <div class="scale-control-item">
-                    <label>バーガー: <span id="cubeScaleValue">100%</span></label>
-                    <input type="range" id="cubeScaleSlider" min="0.1" max="3.0" step="0.1" value="1.0" class="asset-scale-slider">
+                    <label>バーガー: <span id="cubeScaleValue">10%</span></label>
+                    <input type="range" id="cubeScaleSlider" min="0.01" max="1.0" step="0.01" value="0.1" class="asset-scale-slider">
                 </div>
                 <div class="scale-control-item">
-                    <label>レコードマシン: <span id="recordScaleValue">100%</span></label>
-                    <input type="range" id="recordScaleSlider" min="0.1" max="3.0" step="0.1" value="1.0" class="asset-scale-slider">
+                    <label>レコードマシン: <span id="recordScaleValue">10%</span></label>
+                    <input type="range" id="recordScaleSlider" min="0.01" max="1.0" step="0.01" value="0.1" class="asset-scale-slider">
                 </div>
                 <div class="scale-control-item">
-                    <label>ジュースボックス: <span id="juiceBoxScaleValue">100%</span></label>
-                    <input type="range" id="juiceBoxScaleSlider" min="0.1" max="3.0" step="0.1" value="1.0" class="asset-scale-slider">
+                    <label>ジュースボックス: <span id="juiceBoxScaleValue">10%</span></label>
+                    <input type="range" id="juiceBoxScaleSlider" min="0.01" max="1.0" step="0.01" value="0.1" class="asset-scale-slider">
                 </div>
                 <div class="scale-control-item">
-                    <label>マイクデスク: <span id="mikeDeskScaleValue">100%</span></label>
-                    <input type="range" id="mikeDeskScaleSlider" min="0.1" max="3.0" step="0.1" value="1.0" class="asset-scale-slider">
+                    <label>マイクデスク: <span id="mikeDeskScaleValue">10%</span></label>
+                    <input type="range" id="mikeDeskScaleSlider" min="0.01" max="1.0" step="0.01" value="0.1" class="asset-scale-slider">
                 </div>
+                <div class="scale-control-item">
+                    <label>トロフィー: <span id="trophyScaleValue">10%</span></label>
+                    <input type="range" id="trophyScaleSlider" min="0.01" max="1.0" step="0.01" value="0.1" class="asset-scale-slider">
+                </div>
+            </div>
+        </div>
+        
+        <!-- 車両サイズ調整 -->
+        <div class="vehicle-scale-section">
+            <h4>車両サイズ調整</h4>
+            <div class="vehicle-scale-control">
+                <label>車両サイズ: <span id="vehicleScaleValue">10%</span></label>
+                <input type="range" id="vehicleScaleSlider" min="0.01" max="1.0" step="0.01" value="0.1" class="asset-scale-slider">
             </div>
         </div>
 
@@ -148,17 +162,18 @@
             </div>
         </div>
 
+
         <!-- ライティング調整セクション -->
         <div class="control-group">
             <label for="lightingHeader">ライティング設定:</label>
             <div class="lighting-controls">
                 <div class="lighting-slider">
                     <label for="ambientIntensity">環境光強度:</label>
-                    <input type="range" id="ambientIntensity" min="0" max="1" step="0.1" value="0.8">
+                    <input type="range" id="ambientIntensity" min="0" max="2" step="0.1" value="1.0">
                 </div>
                 <div class="lighting-slider">
                     <label for="directionalIntensity">方向光強度:</label>
-                    <input type="range" id="directionalIntensity" min="0" max="1" step="0.1" value="0.6">
+                    <input type="range" id="directionalIntensity" min="0" max="2" step="0.1" value="1.0">
                 </div>
                 <div class="lighting-slider">
                     <label for="pointLightIntensity">ポイント光強度:</label>
@@ -241,12 +256,12 @@
         <div class="selected-asset-scale-section" id="selectedAssetScale" style="display: none;">
             <h4>選択アセットのサイズ調整</h4>
             <div class="selected-scale-control">
-                <label>サイズ: <span id="selectedAssetScaleValue">100%</span></label>
-                <input type="range" id="selectedAssetScaleSlider" min="0.1" max="5.0" step="0.1" value="1.0" class="asset-scale-slider">
+                <label>サイズ: <span id="selectedAssetScaleValue">10%</span></label>
+                <input type="range" id="selectedAssetScaleSlider" min="0.01" max="1.0" step="0.01" value="0.1" class="asset-scale-slider">
                 <div class="scale-buttons">
-                    <button id="resetScaleBtn" class="scale-btn">リセット</button>
+                    <button id="resetScaleBtn" class="scale-btn">10%</button>
                     <button id="halfScaleBtn" class="scale-btn">50%</button>
-                    <button id="doubleScaleBtn" class="scale-btn">200%</button>
+                    <button id="doubleScaleBtn" class="scale-btn">100%</button>
                 </div>
             </div>
         </div>
@@ -287,6 +302,20 @@
             </div>
         </div>
         </div>
+    </div>
+    
+    <!-- 音楽コントロール -->
+    <div class="music-controls-panel">
+        <button id="toggleMusicBtn">🎵 音楽を再生</button>
+        <div class="volume-control">
+            <label for="volumeSlider">音量:</label>
+            <input type="range" id="volumeSlider" min="0" max="1" step="0.1" value="0.1">
+            <span id="volumeValue">10%</span>
+        </div>
+        <!-- デバッグ用：通常のaudioタグ -->
+        <audio id="debugAudio" controls style="display: none; margin-top: 10px;">
+            <source src="./assets/Music/Cruise_by_the_Sea.mp3" type="audio/mpeg">
+        </audio>
     </div>
     
     <!-- 画像書き出しボタン -->
