@@ -218,7 +218,8 @@ export class UploadManager {
                 url: url,
                 blob: blob,
                 size: file.size,
-                uploadTime: Date.now()
+                uploadTime: Date.now(),
+                scale: 0.1 // デフォルトスケール（10%）
             };
             
             this.uploadedAssets.set(assetId, assetInfo);
@@ -297,8 +298,9 @@ export class UploadManager {
             // 位置を設定
             mesh.position = position.clone();
             
-            // スケールを適用（10%に縮小）
-            mesh.scaling = new BABYLON.Vector3(0.1, 0.1, 0.1);
+            // スケールを適用
+            const scale = assetInfo.scale;
+            mesh.scaling = new BABYLON.Vector3(scale, scale, scale);
             
             // インタラクション設定
             this.setupMeshInteraction(mesh, assetId);
@@ -432,6 +434,35 @@ export class UploadManager {
                 this.activateAssetPlacement(assetId, assetButton);
             });
             
+            // スケール調整スライダー
+            const scaleContainer = document.createElement('div');
+            scaleContainer.className = 'scale-control-container';
+            
+            const scaleLabel = document.createElement('label');
+            scaleLabel.textContent = `サイズ: ${Math.round(assetInfo.scale * 100)}%`;
+            scaleLabel.className = 'scale-label';
+            
+            const scaleSlider = document.createElement('input');
+            scaleSlider.type = 'range';
+            scaleSlider.min = '0.01';
+            scaleSlider.max = '2.0';
+            scaleSlider.step = '0.01';
+            scaleSlider.value = assetInfo.scale;
+            scaleSlider.className = 'scale-slider';
+            
+            // スライダー変更時の処理
+            scaleSlider.addEventListener('input', (e) => {
+                const newScale = parseFloat(e.target.value);
+                assetInfo.scale = newScale;
+                scaleLabel.textContent = `サイズ: ${Math.round(newScale * 100)}%`;
+                
+                // 既に配置されたこのアセットのメッシュのスケールを更新
+                this.updatePlacedAssetsScale(assetId, newScale);
+            });
+            
+            scaleContainer.appendChild(scaleLabel);
+            scaleContainer.appendChild(scaleSlider);
+            
             // 削除ボタン
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'delete-asset-btn';
@@ -443,6 +474,7 @@ export class UploadManager {
             });
             
             assetContainer.appendChild(assetButton);
+            assetContainer.appendChild(scaleContainer);
             assetContainer.appendChild(deleteBtn);
             this.assetsList.appendChild(assetContainer);
         });
@@ -486,6 +518,23 @@ export class UploadManager {
         this.showStatus(`${assetInfo.name}の配置モード`, 'info');
         
         console.log(`📍 配置モード有効: ${assetInfo.name}`);
+    }
+
+    /**
+     * 配置済みアセットのスケールを更新
+     * @param {string} assetId - アセットID
+     * @param {number} newScale - 新しいスケール値
+     */
+    updatePlacedAssetsScale(assetId, newScale) {
+        // シーン内の全メッシュを検索して、このアセットIDのものを更新
+        this.scene.meshes.forEach(mesh => {
+            if (mesh.metadata && 
+                mesh.metadata.isUploadedAsset && 
+                mesh.metadata.originalAssetId === assetId) {
+                mesh.scaling = new BABYLON.Vector3(newScale, newScale, newScale);
+                console.log(`🔄 メッシュスケール更新: ${mesh.name} -> ${Math.round(newScale * 100)}%`);
+            }
+        });
     }
 
     /**

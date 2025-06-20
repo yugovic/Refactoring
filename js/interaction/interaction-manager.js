@@ -560,7 +560,8 @@ export class InteractionManager {
                             );
                             if (mesh) {
                                 mesh.setEnabled(true);
-                                mesh.scaling = new BABYLON.Vector3(0.1, 0.1, 0.1);
+                                const scale = assetInfo.scale;
+                                mesh.scaling = new BABYLON.Vector3(scale, scale, scale);
                                 this.makeTransparent(mesh);
                             }
                         } catch (error) {

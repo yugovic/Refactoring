@@ -730,6 +730,56 @@ html, body {
     border-color: rgba(255, 255, 255, 0.3);
 }
 
+/* スケール調整コントロール */
+.scale-control-container {
+    padding: 4px 6px;
+    background-color: rgba(30, 34, 42, 0.4);
+    border-radius: 4px;
+    margin: 2px 0;
+}
+
+.scale-label {
+    display: block;
+    font-size: 10px;
+    color: #b0b0b0;
+    margin-bottom: 2px;
+    text-align: center;
+}
+
+.scale-slider {
+    width: 100%;
+    height: 12px;
+    border-radius: 6px;
+    background: rgba(60, 64, 72, 0.6);
+    outline: none;
+    -webkit-appearance: none;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.scale-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: rgba(100, 104, 112, 0.9);
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.scale-slider::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: rgba(100, 104, 112, 0.9);
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.scale-slider:hover::-webkit-slider-thumb {
+    background: rgba(120, 124, 132, 0.9);
+}
+
 /* スクロールバーのスタイル（アップロードリスト用） */
 .uploaded-assets-list::-webkit-scrollbar {
     width: 4px;
