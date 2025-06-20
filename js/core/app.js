@@ -17,6 +17,7 @@ import { SelectionController } from '../interaction/selection-controller.js';
 import { LoadingManager } from '../ui/loading-manager.js';
 import { EnvironmentManager } from '../environment/environment-manager.js';
 import { UploadManager } from '../assets/upload-manager.js';
+import { VehicleManager } from '../assets/vehicle-manager.js';
 
 export class App {
     constructor(canvas) {
@@ -64,6 +65,7 @@ export class App {
             this.managers.ui = new UIManager(this, errorHandler);
             this.managers.environment = new EnvironmentManager(scene, errorHandler);
             this.managers.upload = new UploadManager(scene, this.managers.assetPlacer, errorHandler);
+            this.managers.vehicle = new VehicleManager(scene, this.managers.assetLoader, errorHandler);
             this.loadingManager.setProgress(40);
 
             // 環境をセットアップ
@@ -75,6 +77,9 @@ export class App {
             
             // アップロードマネージャーを初期化
             this.managers.upload.initialize();
+            
+            // 車両マネージャーを初期化
+            this.managers.vehicle.initialize();
             
             // スケール設定を復元
             this.managers.assetPlacer.loadScaleSettings();
@@ -89,6 +94,15 @@ export class App {
             // ローディング表示を非表示
             setTimeout(() => {
                 this.loadingManager.hide();
+                // 車両選択モーダルを表示（少し遅延させてDOM要素が確実に読み込まれるようにする）
+                setTimeout(() => {
+                    console.log('Attempting to show vehicle modal...');
+                    if (this.managers.vehicle) {
+                        this.managers.vehicle.showModal();
+                    } else {
+                        console.error('VehicleManager not available');
+                    }
+                }, 100);
             }, 500);
 
         } catch (error) {

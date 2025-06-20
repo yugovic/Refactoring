@@ -15,16 +15,66 @@
 <body>
     <canvas id="renderCanvas"></canvas>
     
+    <!-- 車両選択モーダル -->
+    <div id="vehicleModal" class="modal">
+        <div class="modal-content">
+            <h2>車両を選択してください</h2>
+            <div class="vehicle-grid">
+                <div class="vehicle-item" data-vehicle="cosmosp_race">
+                    <div class="vehicle-placeholder">🏎️</div>
+                    <h3>Cosmo Sport Race</h3>
+                </div>
+                <div class="vehicle-item" data-vehicle="cosmosp">
+                    <div class="vehicle-placeholder">🚗</div>
+                    <h3>Cosmo Sport</h3>
+                </div>
+                <div class="vehicle-item" data-vehicle="r360_mazda">
+                    <div class="vehicle-placeholder">🚙</div>
+                    <h3>R360 Mazda</h3>
+                </div>
+                <div class="vehicle-item" data-vehicle="RX3_race">
+                    <div class="vehicle-placeholder">🏁</div>
+                    <h3>RX-3 Race</h3>
+                </div>
+                <div class="vehicle-item" data-vehicle="rx7_sabana_race">
+                    <div class="vehicle-placeholder">🏎️</div>
+                    <h3>RX-7 Sabana Race</h3>
+                </div>
+                <div class="vehicle-item" data-vehicle="rx7_sabana">
+                    <div class="vehicle-placeholder">🚗</div>
+                    <h3>RX-7 Sabana</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <div class="controls">
         <button class="controls-header" id="toggleControlsBtn">
             <h3>アセット配置</h3>
             <span class="toggle-icon">−</span>
         </button>
         <div class="controls-content">
-        <button id="cubeBtn">バーガーを配置</button>
-        <button id="recordBtn">レコードマシンを配置</button>
-        <button id="juiceBoxBtn">ジュースボックスを配置</button>
-        <button id="mikeDeskBtn">マイクデスクを配置</button>
+        <!-- 車両配置セクション -->
+        <div class="vehicle-section">
+            <h4>車両配置</h4>
+            <button id="placeVehicleBtn">車両を配置</button>
+            <button id="changeVehicleBtn">車両を変更</button>
+            
+            <!-- 車両情報表示 -->
+            <div class="vehicle-info" id="vehicleInfo" style="display: none;">
+                <h5>選択中の車両</h5>
+                <div id="currentVehicleName">車両が選択されていません</div>
+            </div>
+        </div>
+        
+        <!-- アセット配置セクション -->
+        <div class="asset-section">
+            <h4>アセット配置</h4>
+            <button id="cubeBtn">バーガーを配置</button>
+            <button id="recordBtn">レコードマシンを配置</button>
+            <button id="juiceBoxBtn">ジュースボックスを配置</button>
+            <button id="mikeDeskBtn">マイクデスクを配置</button>
+        </div>
         
         <!-- アセットサイズ調整 -->
         <div class="asset-scale-section">

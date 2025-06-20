@@ -273,16 +273,21 @@ export class SelectionController {
                                name.startsWith("juiceBox_") ||
                                name.startsWith("mikeDesk_");
         
+        // 車両アセットの判定
+        const isVehicleAsset = name.startsWith("placed_vehicle_") || 
+                              (mesh.metadata && mesh.metadata.isVehicle);
+        
         // アップロードアセットの判定 (uploaded_ プレフィックス)
         const isUploadedAsset = name.startsWith("uploaded_");
         
         // メタデータによる判定
         const hasAssetMetadata = mesh.metadata && mesh.metadata.isAsset;
         
-        const isUserPlaced = isStandardAsset || isUploadedAsset || hasAssetMetadata;
+        const isUserPlaced = isStandardAsset || isVehicleAsset || isUploadedAsset || hasAssetMetadata;
         
         console.log(`🔍 ユーザー配置チェック [${name}]: ${isUserPlaced}`, {
             isStandardAsset,
+            isVehicleAsset,
             isUploadedAsset,
             hasAssetMetadata,
             metadata: mesh.metadata
@@ -324,9 +329,18 @@ export class SelectionController {
         
         const meshName = this.selectedMesh.name;
         const meshToDelete = this.selectedMesh;
+        const isVehicle = meshToDelete.metadata && meshToDelete.metadata.isVehicle;
         
         // 選択を解除
         this.deselectAll();
+        
+        // 車両の場合はVehicleManagerからも削除
+        if (isVehicle && this.app && this.app.getManager('vehicle')) {
+            const vehicleManager = this.app.getManager('vehicle');
+            if (vehicleManager.getPlacedVehicle() === meshToDelete) {
+                vehicleManager.placedVehicleMesh = null;
+            }
+        }
         
         // AssetPlacerからも削除（重要）
         if (this.app && this.app.getManager('assetPlacer')) {

@@ -59,6 +59,10 @@ export class UIManager {
      * DOM要素を収集
      */
     collectDOMElements() {
+        // 車両関連ボタン
+        this.elements.placeVehicleBtn = document.getElementById("placeVehicleBtn");
+        this.elements.changeVehicleBtn = document.getElementById("changeVehicleBtn");
+        
         // アセット配置ボタン
         this.elements.cubeBtn = document.getElementById("cubeBtn");
         this.elements.recordBtn = document.getElementById("recordBtn");
@@ -196,6 +200,29 @@ export class UIManager {
      * アセットボタンを設定
      */
     setupAssetButtons() {
+        // 車両配置ボタン
+        if (this.elements.placeVehicleBtn) {
+            this.elements.placeVehicleBtn.addEventListener("click", () => {
+                const vehicleManager = this.app.getManager('vehicle');
+                if (vehicleManager.hasSelectedVehicle()) {
+                    this.resetAssetButtons();
+                    this.elements.placeVehicleBtn.classList.add("active");
+                    this.app.getManager('interaction').setVehiclePlacementMode();
+                } else {
+                    alert('まず車両を選択してください');
+                }
+            });
+        }
+        
+        // 車両変更ボタン
+        if (this.elements.changeVehicleBtn) {
+            this.elements.changeVehicleBtn.addEventListener("click", () => {
+                const vehicleManager = this.app.getManager('vehicle');
+                vehicleManager.showModal();
+            });
+        }
+        
+        // アセット配置ボタン
         const buttons = [
             { element: this.elements.cubeBtn, type: ASSET_TYPES.CUBE },
             { element: this.elements.recordBtn, type: ASSET_TYPES.RECORD_MACHINE },
@@ -694,6 +721,12 @@ export class UIManager {
      * アセットボタンをリセット
      */
     resetAssetButtons() {
+        // 車両ボタンをリセット
+        if (this.elements.placeVehicleBtn) {
+            this.elements.placeVehicleBtn.classList.remove("active");
+        }
+        
+        // アセットボタンをリセット
         [this.elements.cubeBtn, this.elements.recordBtn, 
          this.elements.juiceBoxBtn, this.elements.mikeDeskBtn].forEach(btn => {
             if (btn) btn.classList.remove("active");

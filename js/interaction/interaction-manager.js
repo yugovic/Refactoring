@@ -240,7 +240,15 @@ export class InteractionManager {
         console.log("アクティブアセットID:", activeAssetId);
         console.log("配置モード:", this.currentMode);
         
-        if (this.currentMode === 'uploaded_asset' && activeAssetId) {
+        if (this.currentMode === 'vehicle') {
+            // 車両を配置
+            const vehicleManager = this.app.getManager('vehicle');
+            placedMesh = vehicleManager.placeVehicle(hitPoint);
+            if (!placedMesh) {
+                this.errorHandler.showError("車両の配置に失敗しました。");
+                return;
+            }
+        } else if (this.currentMode === 'uploaded_asset' && activeAssetId) {
             console.log("アップロードアセットを配置:", activeAssetId);
             try {
                 placedMesh = await this.uploadManager.placeUploadedAsset(activeAssetId, hitPoint);
@@ -436,6 +444,23 @@ export class InteractionManager {
         }
         
         const isWallHit = Math.abs(normal.y) < 0.7;
+        
+        // 車両配置モードの場合
+        if (this.currentMode === 'vehicle') {
+            // 床のみに配置可能
+            if (!isFloor) {
+                this.hidePreview();
+                return;
+            }
+            
+            // 床配置用の位置調整
+            position.y += 0.01;
+            
+            // 車両プレビューを表示
+            const vehicleManager = this.app.getManager('vehicle');
+            vehicleManager.showPreview(position);
+            return;
+        }
         
         // 位置調整
         if (isWallHit) {
@@ -670,6 +695,19 @@ export class InteractionManager {
     }
 
     /**
+     * 車両配置モードを設定
+     */
+    setVehiclePlacementMode() {
+        console.log('=== 車両配置モード設定 ===');
+        this.exitPlacementMode();
+        this.currentMode = 'vehicle';
+        this.isPlacing = true;
+        this.selectionController.deselectAll();
+        
+        console.log('車両配置モードを開始しました');
+    }
+
+    /**
      * 配置モードを設定
      * @param {string} mode - アセットタイプ
      */
@@ -705,6 +743,12 @@ export class InteractionManager {
         this.currentMode = null;
         this.cleanupPreview();
         this.gridSystem.hideVerticalHelper();
+        
+        // 車両プレビューもクリーンアップ
+        const vehicleManager = this.app.getManager('vehicle');
+        if (vehicleManager) {
+            vehicleManager.hidePreview();
+        }
         
         // アップロードマネージャーの配置モードもリセット
         if (this.uploadManager) {
