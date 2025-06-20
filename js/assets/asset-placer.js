@@ -20,6 +20,17 @@ export class AssetPlacer {
         
         // シャドウジェネレーターの参照
         this.shadowGenerator = null;
+        
+        // アセットタイプ別のデフォルトスケール
+        this.defaultScales = {
+            [ASSET_TYPES.CUBE]: 1.0,
+            [ASSET_TYPES.RECORD_MACHINE]: 1.0,
+            [ASSET_TYPES.JUICE_BOX]: 1.0,
+            [ASSET_TYPES.MIKE_DESK]: 1.0
+        };
+        
+        // アップロードアセット用のデフォルトスケール
+        this.uploadedAssetScales = new Map();
     }
 
     /**
@@ -61,6 +72,12 @@ export class AssetPlacer {
             }
             
             if (mesh) {
+                // スケールを適用
+                const scale = this.defaultScales[assetType];
+                if (scale !== undefined) {
+                    mesh.scaling = new BABYLON.Vector3(scale, scale, scale);
+                }
+                
                 // 配置エフェクトを表示
                 this.showPlacementEffect(position, assetType);
                 
@@ -108,7 +125,7 @@ export class AssetPlacer {
             if (burger) {
                 this.positionAssetOnFloor(burger, position);
                 this.applyWallRotation(burger);
-                this.setupMeshInteraction(burger);
+                this.setupMeshInteraction(burger, ASSET_TYPES.CUBE);
                 this.createBoundingBox(burger, timestamp);
                 return burger;
             }
@@ -133,7 +150,7 @@ export class AssetPlacer {
             if (record) {
                 this.positionAssetOnFloor(record, position);
                 this.applyWallRotation(record);
-                this.setupMeshInteraction(record);
+                this.setupMeshInteraction(record, ASSET_TYPES.RECORD_MACHINE);
                 this.createBoundingBox(record, timestamp);
                 return record;
             }
@@ -157,7 +174,7 @@ export class AssetPlacer {
             if (juiceBox) {
                 this.positionAssetOnFloor(juiceBox, position);
                 this.applyWallRotation(juiceBox);
-                this.setupMeshInteraction(juiceBox);
+                this.setupMeshInteraction(juiceBox, ASSET_TYPES.JUICE_BOX);
                 this.createBoundingBox(juiceBox, timestamp);
                 return juiceBox;
             }
@@ -197,7 +214,7 @@ export class AssetPlacer {
         
         this.positionAssetOnFloor(mesh, position);
         this.applyWallRotation(mesh);
-        this.setupMeshInteraction(mesh);
+        this.setupMeshInteraction(mesh, ASSET_TYPES.MIKE_DESK);
         
         return mesh;
     }
@@ -409,8 +426,9 @@ export class AssetPlacer {
     /**
      * メッシュのインタラクションを設定
      * @param {BABYLON.Mesh} mesh - メッシュ
+     * @param {string} assetType - アセットタイプ
      */
-    setupMeshInteraction(mesh) {
+    setupMeshInteraction(mesh, assetType = null) {
         // メインメッシュの設定
         mesh.isPickable = true;
         mesh.receiveShadows = true;
@@ -462,6 +480,7 @@ export class AssetPlacer {
             isAsset: true,
             canMove: true,
             assetName: mesh.name,
+            assetType: assetType,
             placementTime: Date.now(),
             childCount: childMeshes.length
         };
@@ -673,10 +692,189 @@ export class AssetPlacer {
     }
 
     /**
+     * アセットタイプのデフォルトスケールを設定
+     * @param {string} assetType - アセットタイプ
+     * @param {number} scale - スケール値
+     */
+    setDefaultScale(assetType, scale) {
+        this.defaultScales[assetType] = scale;
+        console.log(`デフォルトスケール設定: ${assetType} -> ${scale}`);
+    }
+
+    /**
+     * アセットタイプのデフォルトスケールを取得
+     * @param {string} assetType - アセットタイプ
+     * @returns {number} スケール値
+     */
+    getDefaultScale(assetType) {
+        return this.defaultScales[assetType] || 1.0;
+    }
+
+    /**
+     * 特定のアセットタイプの配置済みメッシュのスケールを更新
+     * @param {string} assetType - アセットタイプ
+     * @param {number} newScale - 新しいスケール値
+     */
+    updateAssetTypeScale(assetType, newScale) {
+        this.setDefaultScale(assetType, newScale);
+        
+        // 配置済みのアセットのスケールを更新
+        this.placedAssets.forEach(mesh => {
+            if (mesh.metadata && mesh.metadata.assetType === assetType) {
+                mesh.scaling = new BABYLON.Vector3(newScale, newScale, newScale);
+                console.log(`メッシュスケール更新: ${mesh.name} -> ${Math.round(newScale * 100)}%`);
+            }
+        });
+    }
+
+    /**
+     * 特定のメッシュのスケールを更新
+     * @param {BABYLON.Mesh} mesh - 対象メッシュ
+     * @param {number} newScale - 新しいスケール値
+     */
+    updateMeshScale(mesh, newScale) {
+        if (mesh && mesh.scaling) {
+            mesh.scaling = new BABYLON.Vector3(newScale, newScale, newScale);
+            console.log(`個別メッシュスケール更新: ${mesh.name} -> ${Math.round(newScale * 100)}%`);
+            
+            // アップロードアセットの場合は元アセットのスケールも更新
+            if (mesh.metadata && mesh.metadata.isUploadedAsset && mesh.metadata.originalAssetId) {
+                this.setUploadedAssetScale(mesh.metadata.originalAssetId, newScale);
+            }
+        }
+    }
+    
+    /**
+     * アップロードアセットのデフォルトスケールを設定
+     * @param {string} assetId - アセットID
+     * @param {number} scale - スケール値
+     */
+    setUploadedAssetScale(assetId, scale) {
+        this.uploadedAssetScales.set(assetId, scale);
+        console.log(`アップロードアセットスケール設定: ${assetId} -> ${Math.round(scale * 100)}%`);
+    }
+    
+    /**
+     * アップロードアセットのデフォルトスケールを取得
+     * @param {string} assetId - アセットID
+     * @returns {number} スケール値
+     */
+    getUploadedAssetScale(assetId) {
+        return this.uploadedAssetScales.get(assetId) || 1.0;
+    }
+    
+    /**
+     * 特定のアップロードアセットの配置済みメッシュのスケールを更新
+     * @param {string} assetId - アセットID
+     * @param {number} newScale - 新しいスケール値
+     */
+    updateUploadedAssetTypeScale(assetId, newScale) {
+        this.setUploadedAssetScale(assetId, newScale);
+        
+        // 配置済みのアセットのスケールを更新
+        this.placedAssets.forEach(mesh => {
+            if (mesh.metadata && mesh.metadata.isUploadedAsset && mesh.metadata.originalAssetId === assetId) {
+                mesh.scaling = new BABYLON.Vector3(newScale, newScale, newScale);
+                console.log(`アップロードメッシュスケール更新: ${mesh.name} -> ${Math.round(newScale * 100)}%`);
+            }
+        });
+    }
+
+    /**
+     * スケール設定をローカルストレージに保存
+     */
+    saveScaleSettings() {
+        try {
+            const scaleData = {
+                defaultScales: this.defaultScales,
+                uploadedAssetScales: Object.fromEntries(this.uploadedAssetScales),
+                timestamp: Date.now()
+            };
+            
+            localStorage.setItem('assetScaleSettings', JSON.stringify(scaleData));
+            console.log('スケール設定を保存しました:', scaleData);
+        } catch (error) {
+            console.error('スケール設定の保存に失敗:', error);
+        }
+    }
+    
+    /**
+     * ローカルストレージからスケール設定を復元
+     */
+    loadScaleSettings() {
+        try {
+            const savedData = localStorage.getItem('assetScaleSettings');
+            if (!savedData) {
+                console.log('保存されたスケール設定がありません');
+                return;
+            }
+            
+            const scaleData = JSON.parse(savedData);
+            
+            // デフォルトスケールを復元
+            if (scaleData.defaultScales) {
+                Object.keys(scaleData.defaultScales).forEach(assetType => {
+                    if (this.defaultScales.hasOwnProperty(assetType)) {
+                        this.defaultScales[assetType] = scaleData.defaultScales[assetType];
+                    }
+                });
+            }
+            
+            // アップロードアセットスケールを復元
+            if (scaleData.uploadedAssetScales) {
+                this.uploadedAssetScales = new Map(Object.entries(scaleData.uploadedAssetScales));
+            }
+            
+            console.log('スケール設定を復元しました:', {
+                defaultScales: this.defaultScales,
+                uploadedAssetScales: Object.fromEntries(this.uploadedAssetScales)
+            });
+            
+            // UIに反映
+            this.updateUIWithLoadedScales();
+            
+        } catch (error) {
+            console.error('スケール設定の復元に失敗:', error);
+        }
+    }
+    
+    /**
+     * 復元したスケール設定をUIに反映
+     */
+    updateUIWithLoadedScales() {
+        // UIManagerに通知してスライダーの値を更新
+        const uiManager = this.app?.getManager?.('ui');
+        if (uiManager && uiManager.updateScaleSliders) {
+            uiManager.updateScaleSliders(this.defaultScales);
+        }
+    }
+    
+    /**
+     * スケール設定をリセット
+     */
+    resetScaleSettings() {
+        this.defaultScales = {
+            [ASSET_TYPES.CUBE]: 1.0,
+            [ASSET_TYPES.RECORD_MACHINE]: 1.0,
+            [ASSET_TYPES.JUICE_BOX]: 1.0,
+            [ASSET_TYPES.MIKE_DESK]: 1.0
+        };
+        this.uploadedAssetScales.clear();
+        
+        // ローカルストレージからも削除
+        localStorage.removeItem('assetScaleSettings');
+        
+        console.log('スケール設定をリセットしました');
+    }
+
+    /**
      * クリーンアップ
      */
     dispose() {
         console.log("Disposing AssetPlacer...");
+        
+        // スケール設定を保存
+        this.saveScaleSettings();
         
         this.clearAllAssets();
         this.shadowGenerator = null;

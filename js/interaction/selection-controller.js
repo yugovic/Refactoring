@@ -61,6 +61,12 @@ export class SelectionController {
                 
                 // コールバックを実行
                 this.onSelectCallbacks.forEach(callback => callback(mesh));
+                
+                // UIManagerに選択を通知
+                const uiManager = this.app.getManager('ui');
+                if (uiManager) {
+                    uiManager.showSelectedAssetScaleUI(mesh);
+                }
             }
             
         } catch (error) {
@@ -83,6 +89,12 @@ export class SelectionController {
             
             // コールバックを実行
             this.onDeselectCallbacks.forEach(callback => callback(previousMesh));
+            
+            // UIManagerに選択解除を通知
+            const uiManager = this.app.getManager('ui');
+            if (uiManager) {
+                uiManager.hideSelectedAssetScaleUI();
+            }
             
             console.log("Selection cleared");
             
@@ -253,13 +265,28 @@ export class SelectionController {
         }
         
         const name = mesh.name;
-        const isUserPlaced = name.startsWith("cube_") || 
-                           name.startsWith("burger_") ||
-                           name.startsWith("record_") ||
-                           name.startsWith("juiceBox_") ||
-                           name.startsWith("mikeDesk_");
         
-        console.log(`🔍 ユーザー配置チェック [${name}]: ${isUserPlaced}`);
+        // 標準アセットの判定
+        const isStandardAsset = name.startsWith("cube_") || 
+                               name.startsWith("burger_") ||
+                               name.startsWith("record_") ||
+                               name.startsWith("juiceBox_") ||
+                               name.startsWith("mikeDesk_");
+        
+        // アップロードアセットの判定 (uploaded_ プレフィックス)
+        const isUploadedAsset = name.startsWith("uploaded_");
+        
+        // メタデータによる判定
+        const hasAssetMetadata = mesh.metadata && mesh.metadata.isAsset;
+        
+        const isUserPlaced = isStandardAsset || isUploadedAsset || hasAssetMetadata;
+        
+        console.log(`🔍 ユーザー配置チェック [${name}]: ${isUserPlaced}`, {
+            isStandardAsset,
+            isUploadedAsset,
+            hasAssetMetadata,
+            metadata: mesh.metadata
+        });
         
         if (!isUserPlaced) {
             // より詳細な分析
@@ -270,6 +297,7 @@ export class SelectionController {
                 hasJuice: name.includes("juice"),
                 hasMike: name.includes("mike"),
                 hasDesk: name.includes("desk"),
+                hasUploaded: name.includes("uploaded"),
                 fullName: name
             });
         }

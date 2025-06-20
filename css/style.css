@@ -780,6 +780,133 @@ html, body {
     background: rgba(120, 124, 132, 0.9);
 }
 
+/* アセットサイズ調整セクション */
+.asset-scale-section {
+    margin-top: 15px;
+    padding: 12px;
+    background-color: rgba(20, 24, 32, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+}
+
+.asset-scale-section h4 {
+    margin: 0 0 10px 0;
+    color: #d0d0d0;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+}
+
+.default-scale-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.scale-control-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.scale-control-item label {
+    font-size: 11px;
+    color: #b0b0b0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.asset-scale-slider {
+    width: 100%;
+    height: 10px;
+    border-radius: 5px;
+    background: rgba(60, 64, 72, 0.6);
+    outline: none;
+    -webkit-appearance: none;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.asset-scale-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: rgba(100, 104, 112, 0.9);
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.asset-scale-slider::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: rgba(100, 104, 112, 0.9);
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.asset-scale-slider:hover::-webkit-slider-thumb {
+    background: rgba(120, 124, 132, 0.9);
+}
+
+/* 選択アセットのスケール調整 */
+.selected-asset-scale-section {
+    margin-top: 15px;
+    padding: 12px;
+    background-color: rgba(30, 40, 50, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+}
+
+.selected-asset-scale-section h4 {
+    margin: 0 0 10px 0;
+    color: #e0e0e0;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+}
+
+.selected-scale-control {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.selected-scale-control label {
+    font-size: 12px;
+    color: #c0c0c0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.scale-buttons {
+    display: flex;
+    gap: 4px;
+    margin-top: 6px;
+}
+
+.scale-btn {
+    flex: 1;
+    padding: 4px 8px;
+    background-color: rgba(70, 74, 82, 0.8);
+    color: #d0d0d0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 10px;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+}
+
+.scale-btn:hover {
+    background-color: rgba(90, 94, 102, 0.9);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
 /* スクロールバーのスタイル（アップロードリスト用） */
 .uploaded-assets-list::-webkit-scrollbar {
     width: 4px;

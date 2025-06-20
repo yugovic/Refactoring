@@ -133,6 +133,28 @@ export class UIManager {
             statusDiv: document.getElementById("uploadStatus"),
             assetsList: document.getElementById("uploadedAssetsList")
         };
+        
+        // アセットスケール調整
+        this.elements.assetScale = {
+            cubeSlider: document.getElementById("cubeScaleSlider"),
+            cubeValue: document.getElementById("cubeScaleValue"),
+            recordSlider: document.getElementById("recordScaleSlider"),
+            recordValue: document.getElementById("recordScaleValue"),
+            juiceBoxSlider: document.getElementById("juiceBoxScaleSlider"),
+            juiceBoxValue: document.getElementById("juiceBoxScaleValue"),
+            mikeDeskSlider: document.getElementById("mikeDeskScaleSlider"),
+            mikeDeskValue: document.getElementById("mikeDeskScaleValue")
+        };
+        
+        // 選択アセットスケール調整
+        this.elements.selectedScale = {
+            section: document.getElementById("selectedAssetScale"),
+            slider: document.getElementById("selectedAssetScaleSlider"),
+            value: document.getElementById("selectedAssetScaleValue"),
+            resetBtn: document.getElementById("resetScaleBtn"),
+            halfBtn: document.getElementById("halfScaleBtn"),
+            doubleBtn: document.getElementById("doubleScaleBtn")
+        };
     }
 
     /**
@@ -162,6 +184,12 @@ export class UIManager {
         
         // ヘルプパネル
         this.setupHelpPanel();
+        
+        // アセットスケール調整
+        this.setupAssetScaleControls();
+        
+        // 選択アセットスケール調整
+        this.setupSelectedAssetScaleControls();
     }
 
     /**
@@ -471,6 +499,166 @@ export class UIManager {
                 this.hideHelpPanel();
             });
         }
+    }
+
+    /**
+     * アセットスケール調整コントロールを設定
+     */
+    setupAssetScaleControls() {
+        const assetPlacer = this.app.getManager('assetPlacer');
+        
+        // バーガー
+        if (this.elements.assetScale.cubeSlider) {
+            this.elements.assetScale.cubeSlider.addEventListener('input', (e) => {
+                const scale = parseFloat(e.target.value);
+                this.elements.assetScale.cubeValue.textContent = `${Math.round(scale * 100)}%`;
+                assetPlacer.updateAssetTypeScale(ASSET_TYPES.CUBE, scale);
+                assetPlacer.saveScaleSettings(); // 自動保存
+            });
+        }
+        
+        // レコードマシン
+        if (this.elements.assetScale.recordSlider) {
+            this.elements.assetScale.recordSlider.addEventListener('input', (e) => {
+                const scale = parseFloat(e.target.value);
+                this.elements.assetScale.recordValue.textContent = `${Math.round(scale * 100)}%`;
+                assetPlacer.updateAssetTypeScale(ASSET_TYPES.RECORD_MACHINE, scale);
+                assetPlacer.saveScaleSettings(); // 自動保存
+            });
+        }
+        
+        // ジュースボックス
+        if (this.elements.assetScale.juiceBoxSlider) {
+            this.elements.assetScale.juiceBoxSlider.addEventListener('input', (e) => {
+                const scale = parseFloat(e.target.value);
+                this.elements.assetScale.juiceBoxValue.textContent = `${Math.round(scale * 100)}%`;
+                assetPlacer.updateAssetTypeScale(ASSET_TYPES.JUICE_BOX, scale);
+                assetPlacer.saveScaleSettings(); // 自動保存
+            });
+        }
+        
+        // マイクデスク
+        if (this.elements.assetScale.mikeDeskSlider) {
+            this.elements.assetScale.mikeDeskSlider.addEventListener('input', (e) => {
+                const scale = parseFloat(e.target.value);
+                this.elements.assetScale.mikeDeskValue.textContent = `${Math.round(scale * 100)}%`;
+                assetPlacer.updateAssetTypeScale(ASSET_TYPES.MIKE_DESK, scale);
+                assetPlacer.saveScaleSettings(); // 自動保存
+            });
+        }
+    }
+
+    /**
+     * 選択アセットスケール調整コントロールを設定
+     */
+    setupSelectedAssetScaleControls() {
+        const assetPlacer = this.app.getManager('assetPlacer');
+        const selectionController = this.app.getManager('selection');
+        
+        // スライダー
+        if (this.elements.selectedScale.slider) {
+            this.elements.selectedScale.slider.addEventListener('input', (e) => {
+                const scale = parseFloat(e.target.value);
+                this.elements.selectedScale.value.textContent = `${Math.round(scale * 100)}%`;
+                
+                const selectedMesh = selectionController.getSelectedMesh();
+                if (selectedMesh) {
+                    assetPlacer.updateMeshScale(selectedMesh, scale);
+                }
+            });
+        }
+        
+        // リセットボタン
+        if (this.elements.selectedScale.resetBtn) {
+            this.elements.selectedScale.resetBtn.addEventListener('click', () => {
+                const selectedMesh = selectionController.getSelectedMesh();
+                if (selectedMesh) {
+                    this.elements.selectedScale.slider.value = 1.0;
+                    this.elements.selectedScale.value.textContent = '100%';
+                    assetPlacer.updateMeshScale(selectedMesh, 1.0);
+                }
+            });
+        }
+        
+        // 50%ボタン
+        if (this.elements.selectedScale.halfBtn) {
+            this.elements.selectedScale.halfBtn.addEventListener('click', () => {
+                const selectedMesh = selectionController.getSelectedMesh();
+                if (selectedMesh) {
+                    this.elements.selectedScale.slider.value = 0.5;
+                    this.elements.selectedScale.value.textContent = '50%';
+                    assetPlacer.updateMeshScale(selectedMesh, 0.5);
+                }
+            });
+        }
+        
+        // 200%ボタン
+        if (this.elements.selectedScale.doubleBtn) {
+            this.elements.selectedScale.doubleBtn.addEventListener('click', () => {
+                const selectedMesh = selectionController.getSelectedMesh();
+                if (selectedMesh) {
+                    this.elements.selectedScale.slider.value = 2.0;
+                    this.elements.selectedScale.value.textContent = '200%';
+                    assetPlacer.updateMeshScale(selectedMesh, 2.0);
+                }
+            });
+        }
+    }
+
+    /**
+     * 選択アセットのスケール調整UIを表示
+     * @param {BABYLON.Mesh} mesh - 選択されたメッシュ
+     */
+    showSelectedAssetScaleUI(mesh) {
+        if (this.elements.selectedScale.section && mesh && mesh.metadata && mesh.metadata.isAsset) {
+            this.elements.selectedScale.section.style.display = 'block';
+            
+            // 現在のスケールを取得してスライダーに反映
+            const currentScale = mesh.scaling.x; // x, y, z は同じと仮定
+            this.elements.selectedScale.slider.value = currentScale;
+            this.elements.selectedScale.value.textContent = `${Math.round(currentScale * 100)}%`;
+        }
+    }
+
+    /**
+     * 選択アセットのスケール調整UIを非表示
+     */
+    hideSelectedAssetScaleUI() {
+        if (this.elements.selectedScale.section) {
+            this.elements.selectedScale.section.style.display = 'none';
+        }
+    }
+    
+    /**
+     * スケールスライダーの値を復元された設定で更新
+     * @param {Object} defaultScales - デフォルトスケール設定
+     */
+    updateScaleSliders(defaultScales) {
+        // バーガースライダーを更新
+        if (this.elements.assetScale.cubeSlider && defaultScales[ASSET_TYPES.CUBE] !== undefined) {
+            this.elements.assetScale.cubeSlider.value = defaultScales[ASSET_TYPES.CUBE];
+            this.elements.assetScale.cubeValue.textContent = `${Math.round(defaultScales[ASSET_TYPES.CUBE] * 100)}%`;
+        }
+        
+        // レコードマシンスライダーを更新
+        if (this.elements.assetScale.recordSlider && defaultScales[ASSET_TYPES.RECORD_MACHINE] !== undefined) {
+            this.elements.assetScale.recordSlider.value = defaultScales[ASSET_TYPES.RECORD_MACHINE];
+            this.elements.assetScale.recordValue.textContent = `${Math.round(defaultScales[ASSET_TYPES.RECORD_MACHINE] * 100)}%`;
+        }
+        
+        // ジュースボックススライダーを更新
+        if (this.elements.assetScale.juiceBoxSlider && defaultScales[ASSET_TYPES.JUICE_BOX] !== undefined) {
+            this.elements.assetScale.juiceBoxSlider.value = defaultScales[ASSET_TYPES.JUICE_BOX];
+            this.elements.assetScale.juiceBoxValue.textContent = `${Math.round(defaultScales[ASSET_TYPES.JUICE_BOX] * 100)}%`;
+        }
+        
+        // マイクデスクスライダーを更新
+        if (this.elements.assetScale.mikeDeskSlider && defaultScales[ASSET_TYPES.MIKE_DESK] !== undefined) {
+            this.elements.assetScale.mikeDeskSlider.value = defaultScales[ASSET_TYPES.MIKE_DESK];
+            this.elements.assetScale.mikeDeskValue.textContent = `${Math.round(defaultScales[ASSET_TYPES.MIKE_DESK] * 100)}%`;
+        }
+        
+        console.log('スケールスライダーを更新しました:', defaultScales);
     }
 
     /**

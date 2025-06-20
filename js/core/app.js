@@ -76,6 +76,9 @@ export class App {
             // アップロードマネージャーを初期化
             this.managers.upload.initialize();
             
+            // スケール設定を復元
+            this.managers.assetPlacer.loadScaleSettings();
+            
             // UploadManagerにInteractionManagerの参照を設定
             this.managers.upload.setInteractionManager(this.managers.interaction);
             this.loadingManager.setProgress(100);

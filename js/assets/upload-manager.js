@@ -298,8 +298,8 @@ export class UploadManager {
             // 位置を設定
             mesh.position = position.clone();
             
-            // スケールを適用
-            const scale = assetInfo.scale;
+            // スケールを適用 (AssetPlacerのデフォルトスケールを優先)
+            const scale = this.assetPlacer.getUploadedAssetScale(assetId) || assetInfo.scale;
             mesh.scaling = new BABYLON.Vector3(scale, scale, scale);
             
             // インタラクション設定
@@ -457,7 +457,7 @@ export class UploadManager {
                 scaleLabel.textContent = `サイズ: ${Math.round(newScale * 100)}%`;
                 
                 // 既に配置されたこのアセットのメッシュのスケールを更新
-                this.updatePlacedAssetsScale(assetId, newScale);
+                this.assetPlacer.updateUploadedAssetTypeScale(assetId, newScale);
             });
             
             scaleContainer.appendChild(scaleLabel);

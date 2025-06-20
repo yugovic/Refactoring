@@ -25,6 +25,29 @@
         <button id="recordBtn">レコードマシンを配置</button>
         <button id="juiceBoxBtn">ジュースボックスを配置</button>
         <button id="mikeDeskBtn">マイクデスクを配置</button>
+        
+        <!-- アセットサイズ調整 -->
+        <div class="asset-scale-section">
+            <h4>アセットサイズ調整</h4>
+            <div class="default-scale-controls">
+                <div class="scale-control-item">
+                    <label>バーガー: <span id="cubeScaleValue">100%</span></label>
+                    <input type="range" id="cubeScaleSlider" min="0.1" max="3.0" step="0.1" value="1.0" class="asset-scale-slider">
+                </div>
+                <div class="scale-control-item">
+                    <label>レコードマシン: <span id="recordScaleValue">100%</span></label>
+                    <input type="range" id="recordScaleSlider" min="0.1" max="3.0" step="0.1" value="1.0" class="asset-scale-slider">
+                </div>
+                <div class="scale-control-item">
+                    <label>ジュースボックス: <span id="juiceBoxScaleValue">100%</span></label>
+                    <input type="range" id="juiceBoxScaleSlider" min="0.1" max="3.0" step="0.1" value="1.0" class="asset-scale-slider">
+                </div>
+                <div class="scale-control-item">
+                    <label>マイクデスク: <span id="mikeDeskScaleValue">100%</span></label>
+                    <input type="range" id="mikeDeskScaleSlider" min="0.1" max="3.0" step="0.1" value="1.0" class="asset-scale-slider">
+                </div>
+            </div>
+        </div>
 
         <!-- GLBアップロード機能 -->
         <div class="upload-section">
@@ -162,6 +185,20 @@
         <div class="control-group">
             <button id="rotateBtn">選択したオブジェクトを90度回転</button>
             <button id="deleteBtn">選択したオブジェクトを削除</button>
+        </div>
+        
+        <!-- 選択アセットのスケール調整 -->
+        <div class="selected-asset-scale-section" id="selectedAssetScale" style="display: none;">
+            <h4>選択アセットのサイズ調整</h4>
+            <div class="selected-scale-control">
+                <label>サイズ: <span id="selectedAssetScaleValue">100%</span></label>
+                <input type="range" id="selectedAssetScaleSlider" min="0.1" max="5.0" step="0.1" value="1.0" class="asset-scale-slider">
+                <div class="scale-buttons">
+                    <button id="resetScaleBtn" class="scale-btn">リセット</button>
+                    <button id="halfScaleBtn" class="scale-btn">50%</button>
+                    <button id="doubleScaleBtn" class="scale-btn">200%</button>
+                </div>
+            </div>
         </div>
         
         <!-- デバッグ用カメラ調整パネル -->
