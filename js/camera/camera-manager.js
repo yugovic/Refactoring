@@ -385,6 +385,190 @@ export class CameraManager {
     }
 
     /**
+     * フォーカス前の状態に戻る（アニメーション付き）
+     */
+    returnToPreFocusState() {
+        if (!this.preFocusState || !this.isometricCamera) {
+            console.error("No pre-focus state saved");
+            return;
+        }
+        
+        // GSAPでアニメーション
+        const cameraState = {
+            radius: this.isometricCamera.radius,
+            alpha: this.isometricCamera.alpha,
+            beta: this.isometricCamera.beta,
+            targetX: this.isometricCamera.target.x,
+            targetY: this.isometricCamera.target.y,
+            targetZ: this.isometricCamera.target.z
+        };
+        
+        gsap.to(cameraState, {
+            duration: 1.5,
+            radius: this.preFocusState.radius,
+            alpha: this.preFocusState.alpha,
+            beta: this.preFocusState.beta,
+            targetX: this.preFocusState.target.x,
+            targetY: this.preFocusState.target.y,
+            targetZ: this.preFocusState.target.z,
+            ease: "power2.inOut",
+            onUpdate: () => {
+                this.isometricCamera.radius = cameraState.radius;
+                this.isometricCamera.alpha = cameraState.alpha;
+                this.isometricCamera.beta = cameraState.beta;
+                this.isometricCamera.target.x = cameraState.targetX;
+                this.isometricCamera.target.y = cameraState.targetY;
+                this.isometricCamera.target.z = cameraState.targetZ;
+            },
+            onComplete: () => {
+                // 元のカメラモードに戻す
+                this.isometricCamera.mode = this.preFocusState.mode;
+                if (this.preFocusState.mode === BABYLON.Camera.ORTHOGRAPHIC_CAMERA) {
+                    this.updateCameraProjection();
+                }
+                console.log("Returned to pre-focus state");
+            }
+        });
+    }
+
+    /**
+     * 特定のメッシュにカメラをフォーカス（GSAPアニメーション）
+     * @param {BABYLON.AbstractMesh} targetMesh - フォーカス対象のメッシュ
+     * @param {Object} options - アニメーションオプション
+     */
+    focusOnMesh(targetMesh, options = {}) {
+        if (!targetMesh || !this.isometricCamera) {
+            console.error("Target mesh or camera not available");
+            return;
+        }
+
+        // デフォルトオプション
+        const defaults = {
+            duration: 2,          // アニメーション時間（秒）
+            radiusMultiplier: 2.5,  // メッシュのサイズに対する距離の倍率
+            ease: "power2.inOut",
+            minRadius: 5,        // 最小距離（これ以上近づかない）
+            onComplete: null
+        };
+        
+        const settings = { ...defaults, ...options };
+        
+        // 1人称モードの場合はアイソメトリックに切り替え
+        if (this.currentMode === 'firstPerson') {
+            this.switchCameraMode('isometric');
+        }
+        
+        // ターゲットのバウンディングボックスを取得
+        const boundingInfo = targetMesh.getBoundingInfo();
+        const boundingSphere = boundingInfo.boundingSphere;
+        const center = boundingSphere.centerWorld;
+        const radius = boundingSphere.radiusWorld;
+        
+        console.log("Focus mesh debug:", {
+            meshName: targetMesh.name,
+            sphereRadius: radius,
+            currentCameraRadius: this.isometricCamera.radius,
+            multiplier: settings.radiusMultiplier
+        });
+        
+        // 目標となるカメラ設定
+        let targetRadius = radius * settings.radiusMultiplier;
+        // 最小距離を保証
+        targetRadius = Math.max(targetRadius, settings.minRadius);
+        
+        console.log("Target camera settings:", {
+            targetRadius: targetRadius,
+            minRadius: settings.minRadius,
+            finalRadius: targetRadius
+        });
+        
+        const targetAlpha = this.isometricCamera.alpha; // 現在の角度を維持
+        const targetBeta = Math.PI / 4; // 45度（より近い視点）
+        
+        // フォーカス前のカメラ状態を保存（戻る時のため）
+        this.preFocusState = {
+            radius: this.isometricCamera.radius,
+            alpha: this.isometricCamera.alpha,
+            beta: this.isometricCamera.beta,
+            target: this.isometricCamera.target.clone(),
+            mode: this.isometricCamera.mode,
+            orthoLeft: this.isometricCamera.orthoLeft,
+            orthoRight: this.isometricCamera.orthoRight,
+            orthoTop: this.isometricCamera.orthoTop,
+            orthoBottom: this.isometricCamera.orthoBottom
+        };
+        
+        console.log("Camera state before focus:", {
+            currentMode: this.isometricCamera.mode === BABYLON.Camera.ORTHOGRAPHIC_CAMERA ? "ORTHOGRAPHIC" : "PERSPECTIVE",
+            currentRadius: this.isometricCamera.radius,
+            orthoParams: {
+                left: this.isometricCamera.orthoLeft,
+                right: this.isometricCamera.orthoRight,
+                top: this.isometricCamera.orthoTop,
+                bottom: this.isometricCamera.orthoBottom
+            }
+        });
+        
+        // GSAPでアニメーション（現在の位置から開始）
+        const cameraState = {
+            radius: this.isometricCamera.radius,  // 現在の距離から開始
+            alpha: this.isometricCamera.alpha,
+            beta: this.isometricCamera.beta,
+            targetX: this.isometricCamera.target.x,
+            targetY: this.isometricCamera.target.y,
+            targetZ: this.isometricCamera.target.z,
+            progress: 0  // 投影モード切り替えのタイミング制御用
+        };
+        
+        // 現在の距離から目標距離への変化を確認
+        console.log("Camera animation from/to:", {
+            fromRadius: cameraState.radius,
+            toRadius: targetRadius,
+            radiusChange: cameraState.radius - targetRadius,
+            cameraMode: "Switched to PERSPECTIVE"
+        });
+        
+        // フォーカス時は透視投影に切り替える（ズーム効果のため）
+        this.isometricCamera.mode = BABYLON.Camera.PERSPECTIVE_CAMERA;
+        
+        // デバッグ用：開始距離を調整可能にする
+        const startRadius = settings.startRadius || 20; // デフォルト20、オプションで調整可能
+        console.log("Using start radius:", startRadius);
+        
+        // カメラの開始距離を設定
+        cameraState.radius = startRadius;
+        this.isometricCamera.radius = startRadius;
+        
+        gsap.to(cameraState, {
+            duration: settings.duration,
+            radius: targetRadius,
+            alpha: targetAlpha,
+            beta: targetBeta,
+            targetX: center.x,
+            targetY: center.y,
+            targetZ: center.z,
+            ease: settings.ease,
+            onUpdate: () => {
+                this.isometricCamera.radius = cameraState.radius;
+                this.isometricCamera.alpha = cameraState.alpha;
+                this.isometricCamera.beta = cameraState.beta;
+                this.isometricCamera.target.x = cameraState.targetX;
+                this.isometricCamera.target.y = cameraState.targetY;
+                this.isometricCamera.target.z = cameraState.targetZ;
+            },
+            onComplete: () => {
+                console.log("Camera focus animation completed", {
+                    finalRadius: this.isometricCamera.radius,
+                    finalTarget: this.isometricCamera.target
+                });
+                if (settings.onComplete) {
+                    settings.onComplete();
+                }
+            }
+        });
+    }
+
+    /**
      * 現在のカメラ設定を取得
      * @returns {Object} カメラ設定
      */

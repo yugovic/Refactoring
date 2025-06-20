@@ -216,6 +216,9 @@ export class UIManager {
         
         // 音楽コントロール
         this.setupMusicControls();
+        
+        // 車両フォーカスボタン
+        this.setupVehicleFocusButton();
     }
 
     /**
@@ -520,6 +523,18 @@ export class UIManager {
                 });
             }
         });
+        
+        // フォーカス開始距離スライダー
+        const focusStartRadiusSlider = document.getElementById('focusStartRadius');
+        const focusStartRadiusValue = document.getElementById('focusStartRadiusValue');
+        if (focusStartRadiusSlider && focusStartRadiusValue) {
+            this.focusStartRadius = 20; // デフォルト値
+            focusStartRadiusSlider.addEventListener('input', (e) => {
+                this.focusStartRadius = parseInt(e.target.value);
+                focusStartRadiusValue.textContent = this.focusStartRadius;
+                console.log('Focus start radius changed to:', this.focusStartRadius);
+            });
+        }
         
         // リセットボタン
         if (this.elements.camera.resetBtn) {
@@ -1149,6 +1164,51 @@ const cameraSettings = {
     }
 
     /**
+     * 車両フォーカスボタンを設定
+     */
+    setupVehicleFocusButton() {
+        const focusBtn = document.getElementById('focusVehicleBtn');
+        if (focusBtn) {
+            focusBtn.addEventListener('click', () => {
+                this.focusOnVehicle();
+            });
+        }
+    }
+
+    /**
+     * 配置済み車両にカメラをフォーカス
+     */
+    focusOnVehicle() {
+        const vehicleManager = this.app.getManager('vehicle');
+        const cameraManager = this.app.getManager('camera');
+        
+        if (!vehicleManager || !cameraManager) {
+            console.error('VehicleManager or CameraManager not available');
+            return;
+        }
+        
+        const placedVehicle = vehicleManager.getPlacedVehicle();
+        if (!placedVehicle) {
+            this.app.getErrorHandler().showError('車両が配置されていません。先に車両を配置してください。');
+            return;
+        }
+        
+        // カメラをフォーカス（固定距離でズームイン）
+        cameraManager.focusOnMesh(placedVehicle, {
+            duration: 1.8,
+            radiusMultiplier: 15,  // 大きめの倍率にして、minRadiusで制限
+            minRadius: 5,          // 固定距離5まで近づく（かなり近い）
+            startRadius: this.focusStartRadius || 20,  // UIで設定された値を使用
+            ease: "power2.inOut",
+            onComplete: () => {
+                console.log('Vehicle focus completed');
+                // 元に戻るボタンを表示
+                this.showReturnToCameraButton();
+            }
+        });
+    }
+
+    /**
      * カメラ位置表示を作成
      */
     createCameraPositionDisplay() {
@@ -1274,5 +1334,85 @@ const cameraSettings = {
         
         // 参照をクリア
         this.elements = {};
+    }
+    
+    /**
+     * 元のカメラに戻るボタンを表示
+     */
+    showReturnToCameraButton() {
+        // 既存のボタンがあれば削除
+        this.hideReturnToCameraButton();
+        
+        // ボタンを作成
+        const returnBtn = document.createElement('button');
+        returnBtn.id = 'returnToCameraBtn';
+        returnBtn.innerHTML = '🔙 元のカメラに戻る';
+        returnBtn.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            background-color: rgba(128, 128, 128, 0.6);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        `;
+        
+        // ホバー効果
+        returnBtn.addEventListener('mouseenter', () => {
+            returnBtn.style.backgroundColor = 'rgba(128, 128, 128, 0.8)';
+            returnBtn.style.transform = 'translateX(-50%) translateY(-2px)';
+            returnBtn.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.3)';
+        });
+        
+        returnBtn.addEventListener('mouseleave', () => {
+            returnBtn.style.backgroundColor = 'rgba(128, 128, 128, 0.6)';
+            returnBtn.style.transform = 'translateX(-50%)';
+            returnBtn.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.2)';
+        });
+        
+        // クリックイベント
+        returnBtn.addEventListener('click', () => {
+            this.returnToDefaultCamera();
+        });
+        
+        document.body.appendChild(returnBtn);
+        
+        // フェードインアニメーション
+        returnBtn.style.opacity = '0';
+        setTimeout(() => {
+            returnBtn.style.opacity = '1';
+        }, 100);
+    }
+    
+    /**
+     * 元のカメラに戻るボタンを非表示
+     */
+    hideReturnToCameraButton() {
+        const returnBtn = document.getElementById('returnToCameraBtn');
+        if (returnBtn) {
+            returnBtn.remove();
+        }
+    }
+    
+    /**
+     * デフォルトカメラに戻る
+     */
+    returnToDefaultCamera() {
+        const cameraManager = this.app.getManager('camera');
+        if (cameraManager) {
+            // フォーカス前の状態に戻る（アニメーション付き）
+            cameraManager.returnToPreFocusState();
+            
+            // ボタンを非表示
+            this.hideReturnToCameraButton();
+        }
     }
 }

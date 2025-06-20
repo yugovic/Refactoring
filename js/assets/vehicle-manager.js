@@ -307,6 +307,14 @@ export class VehicleManager {
     }
 
     /**
+     * 配置済み車両を取得
+     * @returns {BABYLON.AbstractMesh|null}
+     */
+    getPlacedVehicle() {
+        return this.placedVehicleMesh;
+    }
+
+    /**
      * プレビューを表示
      * @param {BABYLON.Vector3} position 
      */
