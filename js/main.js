@@ -287,6 +287,38 @@ window.logVehicleBounding = function() {
 };
 
 /**
+ * バウンディングボックスの状態を確認
+ */
+window.checkBoundingBoxes = function() {
+    if (!window.app) {
+        console.error("アプリケーションが初期化されていません");
+        return;
+    }
+    
+    const scene = window.app.getScene();
+    if (!scene) {
+        console.error("シーンが見つかりません");
+        return;
+    }
+    const boundingBoxes = scene.meshes.filter(m => 
+        m.metadata && m.metadata.isBoundingBox
+    );
+    console.log(`\n📦 バウンディングボックス情報 (総数: ${boundingBoxes.length})`);
+    boundingBoxes.forEach(box => {
+        console.log(`\n📦 ${box.name}:`);
+        console.log(`  位置: (${box.position.x.toFixed(3)}, ${box.position.y.toFixed(3)}, ${box.position.z.toFixed(3)})`);
+        console.log(`  親: ${box.parent ? box.parent.name : 'null'}`);
+        console.log(`  選択可能: ${box.isPickable}`);
+        console.log(`  可視性: ${box.visibility}`);
+        console.log(`  スケール: (${box.scaling.x.toFixed(3)}, ${box.scaling.y.toFixed(3)}, ${box.scaling.z.toFixed(3)})`);
+        if (box.metadata.parentAsset) {
+            const parent = box.metadata.parentAsset;
+            console.log(`  親アセット位置: (${parent.position.x.toFixed(3)}, ${parent.position.y.toFixed(3)}, ${parent.position.z.toFixed(3)})`);
+        }
+    });
+};
+
+/**
  * デバッグヘルプを表示
  */
 window.debugHelp = function() {
@@ -296,6 +328,7 @@ window.debugHelp = function() {
     console.log("window.logAllBounding()           - 全アセットのバウンディング情報表示");
     console.log("window.diagnoseBounding()         - バウンディング問題の診断");
     console.log("window.logVehicleBounding()       - 車両のバウンディング情報表示");
+    console.log("window.checkBoundingBoxes()       - バウンディングボックスの状態確認");
     console.log("window.debugHelp()                - このヘルプを表示");
     console.log("\n使用例:");
     console.log("1. 車両を配置する");

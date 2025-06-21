@@ -674,21 +674,120 @@ export class AssetPlacer {
                 this.scene
             );
             
-            // 位置を設定（メッシュの中心に配置）
-            const center = boundingBox.center || mesh.position;
-            visualBoundingBox.position = center.clone();
-            
-            // スケールを適用
-            if (mesh.scaling) {
-                visualBoundingBox.scaling = mesh.scaling.clone();
+            // 車両の場合は特別な処理を適用
+            if (mesh.metadata && (mesh.metadata.isVehicle || mesh.metadata.vehicleType)) {
+                console.log(`🚗 車両用バウンディングボックス処理`);
+                
+                // 車両の場合は親メッシュのバウンディング情報を使用
+                mesh.computeWorldMatrix(true);
+                mesh.refreshBoundingInfo();
+                const parentBoundingInfo = mesh.getBoundingInfo();
+                
+                if (parentBoundingInfo && parentBoundingInfo.boundingBox) {
+                    // 親メッシュのバウンディングボックスを使用
+                    const parentBoundingBox = parentBoundingInfo.boundingBox;
+                    
+                    // ワールド座標でのサイズを計算
+                    const worldSize = {
+                        width: parentBoundingBox.maximumWorld.x - parentBoundingBox.minimumWorld.x,
+                        height: parentBoundingBox.maximumWorld.y - parentBoundingBox.minimumWorld.y,
+                        depth: parentBoundingBox.maximumWorld.z - parentBoundingBox.minimumWorld.z
+                    };
+                    
+                    // バウンディングボックスを再作成
+                    visualBoundingBox.dispose();
+                    const newBoundingBox = BABYLON.MeshBuilder.CreateBox(
+                        `boundingBox_${mesh.name}_${timestamp}`, 
+                        {
+                            width: worldSize.width,
+                            height: worldSize.height,  
+                            depth: worldSize.depth
+                        }, 
+                        this.scene
+                    );
+                    visualBoundingBox = newBoundingBox;
+                    
+                    // バウンディングボックスを親メッシュに設定せず、ワールド座標で配置
+                    visualBoundingBox.parent = null;
+                    
+                    // ワールド座標での中心位置を計算
+                    const worldCenter = parentBoundingBox.minimumWorld.add(parentBoundingBox.maximumWorld).scale(0.5);
+                    
+                    // デバッグ情報
+                    console.log(`  🔍 ワールド座標確認:`);
+                    console.log(`    minimumWorld: (${parentBoundingBox.minimumWorld.x.toFixed(3)}, ${parentBoundingBox.minimumWorld.y.toFixed(3)}, ${parentBoundingBox.minimumWorld.z.toFixed(3)})`);
+                    console.log(`    maximumWorld: (${parentBoundingBox.maximumWorld.x.toFixed(3)}, ${parentBoundingBox.maximumWorld.y.toFixed(3)}, ${parentBoundingBox.maximumWorld.z.toFixed(3)})`);
+                    console.log(`    計算された中心: (${worldCenter.x.toFixed(3)}, ${worldCenter.y.toFixed(3)}, ${worldCenter.z.toFixed(3)})`);
+                    console.log(`    車両の実際の位置: (${mesh.position.x.toFixed(3)}, ${mesh.position.y.toFixed(3)}, ${mesh.position.z.toFixed(3)})`);
+                    
+                    // ワールド座標が不正確な場合は、車両の位置を直接使用
+                    if (Math.abs(worldCenter.x) < 0.5 && Math.abs(worldCenter.z) < 0.5 && 
+                        (Math.abs(mesh.position.x) > 1 || Math.abs(mesh.position.z) > 1)) {
+                        console.warn(`  ⚠️ ワールド座標が不正確です。車両の位置を使用します`);
+                        visualBoundingBox.position = mesh.position.clone();
+                    } else {
+                        visualBoundingBox.position = worldCenter;
+                    }
+                    
+                    // スケールは設定しない
+                    visualBoundingBox.scaling = new BABYLON.Vector3(1, 1, 1);
+                    
+                    console.log(`  親メッシュバウンディングボックスサイズ: ${worldSize.width.toFixed(3)} x ${worldSize.height.toFixed(3)} x ${worldSize.depth.toFixed(3)}`);
+                    console.log(`  バウンディングボックス位置: (${worldCenter.x.toFixed(3)}, ${worldCenter.y.toFixed(3)}, ${worldCenter.z.toFixed(3)})`);
+                    console.log(`  車両位置: (${mesh.position.x.toFixed(3)}, ${mesh.position.y.toFixed(3)}, ${mesh.position.z.toFixed(3)})`);
+                    
+                    // 車両用のメタデータ設定とワイヤーフレームマテリアルを即座に設定
+                    visualBoundingBox.visibility = 0.0;
+                    visualBoundingBox.isPickable = false;
+                    visualBoundingBox.name = `boundingBox_${mesh.name}_${timestamp}`;
+                    
+                    const wireframeMaterial = new BABYLON.StandardMaterial(`boundingBoxMaterial_${timestamp}`, this.scene);
+                    wireframeMaterial.wireframe = true;
+                    wireframeMaterial.emissiveColor = new BABYLON.Color3(0, 1, 0);
+                    wireframeMaterial.alpha = 0.8;
+                    visualBoundingBox.material = wireframeMaterial;
+                    
+                    visualBoundingBox.metadata = {
+                        isBoundingBox: true,
+                        parentAsset: mesh,
+                        boundingBoxType: 'vehicle',
+                        originalSize: worldSize,
+                        timestamp: timestamp
+                    };
+                    
+                    if (!mesh.metadata) {
+                        mesh.metadata = {};
+                    }
+                    mesh.metadata.visualBoundingBox = visualBoundingBox;
+                    
+                    console.log(`✅ 車両バウンディングボックス作成完了 [${mesh.name}] -> [${visualBoundingBox.name}]`);
+                    return;
+                } else {
+                    console.warn(`⚠️ 車両の親メッシュバウンディング情報が取得できません`);
+                }
+            } else {
+                // 通常のアセットの場合
+                const center = boundingBox.center || mesh.position;
+                visualBoundingBox.position = center.clone();
+                
+                // スケールを適用
+                if (mesh.scaling) {
+                    visualBoundingBox.scaling = mesh.scaling.clone();
+                }
+                
+                // 親を設定
+                visualBoundingBox.parent = mesh;
             }
-            
-            // 親を設定
-            visualBoundingBox.parent = mesh;
             
             // 表示設定（デフォルトでは非表示、デバッグ時のみ表示）
             visualBoundingBox.visibility = 0.0;
             visualBoundingBox.isPickable = false; // バウンディングボックス自体はピッキング不可
+            
+            // 車両の場合は特に確実にピッキング不可にする
+            if (mesh.metadata && (mesh.metadata.isVehicle || mesh.metadata.vehicleType)) {
+                visualBoundingBox.name = `boundingBox_${mesh.name}_${timestamp}`;
+                console.log(`  バウンディングボックス名: ${visualBoundingBox.name}`);
+            }
             
             // ワイヤーフレームマテリアルを作成
             const wireframeMaterial = new BABYLON.StandardMaterial(`boundingBoxMaterial_${timestamp}`, this.scene);
@@ -721,8 +820,13 @@ export class AssetPlacer {
                 );
                 boundingBoxes.forEach(box => {
                     box.visibility = visible ? 0.5 : 0.0;
+                    // 車両のバウンディングボックスは赤色で表示
+                    if (box.metadata && box.metadata.boundingBoxType === 'vehicle' && box.material) {
+                        box.material.emissiveColor = new BABYLON.Color3(1, 0, 0); // 赤色
+                    }
                 });
                 console.log(`バウンディングボックス表示: ${visible ? 'ON' : 'OFF'} (${boundingBoxes.length}個)`);
+                return boundingBoxes.length;
             };
             
         } catch (error) {

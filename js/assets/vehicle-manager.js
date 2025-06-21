@@ -269,6 +269,15 @@ export class VehicleManager {
             // メッシュを有効化
             clonedMesh.setEnabled(true);
             
+            // ワールドマトリックスを強制的に更新
+            clonedMesh.computeWorldMatrix(true);
+            
+            // 子メッシュのワールドマトリックスも更新
+            const childMeshes = clonedMesh.getChildMeshes();
+            childMeshes.forEach(child => {
+                child.computeWorldMatrix(true);
+            });
+            
             // 車両タイプを識別するためのメタデータを設定
             clonedMesh.metadata = {
                 type: 'vehicle',
@@ -545,28 +554,17 @@ export class VehicleManager {
             });
 
             if (globalMin && globalMax) {
-                // 親メッシュの位置を基準にローカル座標に変換
-                const parentPosition = parentMesh.position;
-                const parentRotation = parentMesh.rotation;
-                const parentScaling = parentMesh.scaling;
-
-                // ワールド座標からローカル座標への変換
-                const localMin = globalMin.subtract(parentPosition);
-                const localMax = globalMax.subtract(parentPosition);
-
-                // スケーリングを考慮
-                if (parentScaling.x !== 0) {
-                    localMin.x /= parentScaling.x;
-                    localMax.x /= parentScaling.x;
-                }
-                if (parentScaling.y !== 0) {
-                    localMin.y /= parentScaling.y;
-                    localMax.y /= parentScaling.y;
-                }
-                if (parentScaling.z !== 0) {
-                    localMin.z /= parentScaling.z;
-                    localMax.z /= parentScaling.z;
-                }
+                // 親メッシュの逆変換マトリックスを使用して正確な変換を行う
+                parentMesh.computeWorldMatrix(true);
+                const parentWorldMatrix = parentMesh.getWorldMatrix();
+                const inverseMatrix = parentWorldMatrix.clone().invert();
+                
+                // ワールド座標からローカル座標への正確な変換
+                const localMin = BABYLON.Vector3.TransformCoordinates(globalMin, inverseMatrix);
+                const localMax = BABYLON.Vector3.TransformCoordinates(globalMax, inverseMatrix);
+                
+                console.log(`  変換前ワールド座標: Min(${globalMin.x.toFixed(3)}, ${globalMin.y.toFixed(3)}, ${globalMin.z.toFixed(3)})`);
+                console.log(`  変換後ローカル座標: Min(${localMin.x.toFixed(3)}, ${localMin.y.toFixed(3)}, ${localMin.z.toFixed(3)})`)
 
                 // 親メッシュのバウンディング情報を新しく設定
                 const boundingMin = new BABYLON.Vector3(
