@@ -149,6 +149,10 @@ export class VehicleManager {
                         // デフォルトスケールを適用
                         rootMesh.scaling = new BABYLON.Vector3(this.vehicleScale, this.vehicleScale, this.vehicleScale);
                         
+                        // ロード直後にバウンディングを再計算
+                        this.recalculateParentBounding(rootMesh);
+                        rootMesh.refreshBoundingInfo();
+                        
                         resolve(rootMesh);
                     } else {
                         reject(new Error("No meshes loaded for vehicle"));
@@ -276,6 +280,12 @@ export class VehicleManager {
                 placementTime: Date.now()
             };
             
+            // 親メッシュのバウンディングを子メッシュから再計算
+            this.recalculateParentBounding(clonedMesh);
+            
+            // バウンディング情報を強制更新
+            clonedMesh.refreshBoundingInfo();
+
             // バウンディング情報をログ出力
             this.logVehicleBoundingInfo(clonedMesh);
 
@@ -474,6 +484,123 @@ export class VehicleManager {
      */
     getVehicleScale() {
         return this.vehicleScale;
+    }
+
+    /**
+     * 親メッシュのバウンディングを子メッシュから再計算
+     * @param {BABYLON.AbstractMesh} parentMesh - 親メッシュ
+     */
+    recalculateParentBounding(parentMesh) {
+        try {
+            const childMeshes = parentMesh.getChildMeshes ? parentMesh.getChildMeshes() : [];
+            
+            if (childMeshes.length === 0) {
+                console.log(`車両 ${parentMesh.name} に子メッシュがありません - バウンディング再計算をスキップ`);
+                return;
+            }
+
+            console.log(`🔄 車両 ${parentMesh.name} のバウンディングを再計算中... (子メッシュ: ${childMeshes.length}個)`);
+
+            // 子メッシュの中でジオメトリを持つものを探す
+            const meshesWithGeometry = childMeshes.filter(child => 
+                child.geometry && child.getVerticesData && child.getVerticesData(BABYLON.VertexBuffer.PositionKind)
+            );
+
+            if (meshesWithGeometry.length === 0) {
+                console.log(`車両 ${parentMesh.name} の子メッシュにジオメトリが見つかりません`);
+                return;
+            }
+
+            // 各子メッシュのワールド座標でのバウンディングボックスを計算
+            let globalMin = null;
+            let globalMax = null;
+
+            meshesWithGeometry.forEach((child, index) => {
+                // 子メッシュのバウンディング情報を更新
+                child.refreshBoundingInfo();
+                const childBounding = child.getBoundingInfo();
+                
+                if (childBounding) {
+                    const worldMin = childBounding.boundingBox.minimumWorld;
+                    const worldMax = childBounding.boundingBox.maximumWorld;
+                    
+                    if (globalMin === null) {
+                        globalMin = worldMin.clone();
+                        globalMax = worldMax.clone();
+                    } else {
+                        // 最小値と最大値を更新
+                        globalMin.x = Math.min(globalMin.x, worldMin.x);
+                        globalMin.y = Math.min(globalMin.y, worldMin.y);
+                        globalMin.z = Math.min(globalMin.z, worldMin.z);
+                        
+                        globalMax.x = Math.max(globalMax.x, worldMax.x);
+                        globalMax.y = Math.max(globalMax.y, worldMax.y);
+                        globalMax.z = Math.max(globalMax.z, worldMax.z);
+                    }
+                    
+                    console.log(`  子メッシュ[${index}] ${child.name}: 
+                        ワールド範囲 (${worldMin.x.toFixed(3)}, ${worldMin.y.toFixed(3)}, ${worldMin.z.toFixed(3)}) - 
+                        (${worldMax.x.toFixed(3)}, ${worldMax.y.toFixed(3)}, ${worldMax.z.toFixed(3)})`);
+                }
+            });
+
+            if (globalMin && globalMax) {
+                // 親メッシュの位置を基準にローカル座標に変換
+                const parentPosition = parentMesh.position;
+                const parentRotation = parentMesh.rotation;
+                const parentScaling = parentMesh.scaling;
+
+                // ワールド座標からローカル座標への変換
+                const localMin = globalMin.subtract(parentPosition);
+                const localMax = globalMax.subtract(parentPosition);
+
+                // スケーリングを考慮
+                if (parentScaling.x !== 0) {
+                    localMin.x /= parentScaling.x;
+                    localMax.x /= parentScaling.x;
+                }
+                if (parentScaling.y !== 0) {
+                    localMin.y /= parentScaling.y;
+                    localMax.y /= parentScaling.y;
+                }
+                if (parentScaling.z !== 0) {
+                    localMin.z /= parentScaling.z;
+                    localMax.z /= parentScaling.z;
+                }
+
+                // 親メッシュのバウンディング情報を新しく設定
+                const boundingMin = new BABYLON.Vector3(
+                    Math.min(localMin.x, localMax.x),
+                    Math.min(localMin.y, localMax.y),
+                    Math.min(localMin.z, localMax.z)
+                );
+                const boundingMax = new BABYLON.Vector3(
+                    Math.max(localMin.x, localMax.x),
+                    Math.max(localMin.y, localMax.y),
+                    Math.max(localMin.z, localMax.z)
+                );
+
+                // 新しいバウンディング情報を設定
+                parentMesh.setBoundingInfo(new BABYLON.BoundingInfo(boundingMin, boundingMax));
+                
+                console.log(`✅ 車両 ${parentMesh.name} のバウンディングを再計算完了:`);
+                console.log(`  新しいローカル範囲: (${boundingMin.x.toFixed(3)}, ${boundingMin.y.toFixed(3)}, ${boundingMin.z.toFixed(3)}) - 
+                    (${boundingMax.x.toFixed(3)}, ${boundingMax.y.toFixed(3)}, ${boundingMax.z.toFixed(3)})`);
+                console.log(`  新しいワールド範囲: (${globalMin.x.toFixed(3)}, ${globalMin.y.toFixed(3)}, ${globalMin.z.toFixed(3)}) - 
+                    (${globalMax.x.toFixed(3)}, ${globalMax.y.toFixed(3)}, ${globalMax.z.toFixed(3)})`);
+                    
+                // バウンディング半径も計算
+                const center = boundingMin.add(boundingMax).scale(0.5);
+                const radius = BABYLON.Vector3.Distance(center, boundingMax);
+                console.log(`  計算された半径: ${radius.toFixed(3)}`);
+
+            } else {
+                console.warn(`車両 ${parentMesh.name} のバウンディング再計算に失敗 - 有効な子メッシュがありません`);
+            }
+
+        } catch (error) {
+            console.error(`❌ 車両 ${parentMesh.name} のバウンディング再計算中にエラー:`, error);
+        }
     }
 
     /**
