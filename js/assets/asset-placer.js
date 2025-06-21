@@ -460,6 +460,9 @@ export class AssetPlacer {
         // アクティブメッシュとして常に選択
         mesh.alwaysSelectAsActiveMesh = true;
         
+        // バウンディング情報をログ出力
+        this.logBoundingInfo(mesh, assetType);
+        
         // メッシュのマテリアル設定
         if (mesh.material) {
             mesh.material.needDepthPrePass = false;
@@ -529,7 +532,88 @@ export class AssetPlacer {
             console.log(`👶 子メッシュ詳細 [${mesh.name}]:`);
             childMeshes.forEach((child, index) => {
                 console.log(`  [${index}] ${child.name}: pickable=${child.isPickable}, enabled=${child.isEnabled()}, visible=${child.visibility}, hasGeometry=${!!child.geometry}`);
+                
+                // 子メッシュのバウンディング情報もログ出力
+                this.logBoundingInfo(child, assetType, index);
             });
+        }
+    }
+    
+    /**
+     * バウンディング情報をログに出力
+     * @param {BABYLON.Mesh} mesh - メッシュ
+     * @param {string} assetType - アセットタイプ
+     * @param {number} childIndex - 子メッシュのインデックス（メインメッシュの場合は undefined）
+     */
+    logBoundingInfo(mesh, assetType = null, childIndex = undefined) {
+        try {
+            // メッシュのスケール情報
+            const scale = mesh.scaling;
+            const childPrefix = childIndex !== undefined ? `[子${childIndex}] ` : '';
+            
+            console.log(`📐 ${childPrefix}バウンディング情報 [${mesh.name}${assetType ? ` - ${assetType}` : ''}]:`);
+            console.log(`  スケール: (${scale.x.toFixed(3)}, ${scale.y.toFixed(3)}, ${scale.z.toFixed(3)})`);
+            console.log(`  位置: (${mesh.position.x.toFixed(3)}, ${mesh.position.y.toFixed(3)}, ${mesh.position.z.toFixed(3)})`);
+            
+            // バウンディング情報を取得
+            const boundingInfo = mesh.getBoundingInfo();
+            if (boundingInfo) {
+                const boundingBox = boundingInfo.boundingBox;
+                const boundingSphere = boundingInfo.boundingSphere;
+                
+                console.log(`  バウンディングボックス:`);
+                console.log(`    最小値: (${boundingBox.minimum.x.toFixed(3)}, ${boundingBox.minimum.y.toFixed(3)}, ${boundingBox.minimum.z.toFixed(3)})`);
+                console.log(`    最大値: (${boundingBox.maximum.x.toFixed(3)}, ${boundingBox.maximum.y.toFixed(3)}, ${boundingBox.maximum.z.toFixed(3)})`);
+                console.log(`    サイズ: (${(boundingBox.maximum.x - boundingBox.minimum.x).toFixed(3)}, ${(boundingBox.maximum.y - boundingBox.minimum.y).toFixed(3)}, ${(boundingBox.maximum.z - boundingBox.minimum.z).toFixed(3)})`);
+                
+                console.log(`  ワールドバウンディングボックス:`);
+                console.log(`    最小値: (${boundingBox.minimumWorld.x.toFixed(3)}, ${boundingBox.minimumWorld.y.toFixed(3)}, ${boundingBox.minimumWorld.z.toFixed(3)})`);
+                console.log(`    最大値: (${boundingBox.maximumWorld.x.toFixed(3)}, ${boundingBox.maximumWorld.y.toFixed(3)}, ${boundingBox.maximumWorld.z.toFixed(3)})`);
+                console.log(`    サイズ: (${(boundingBox.maximumWorld.x - boundingBox.minimumWorld.x).toFixed(3)}, ${(boundingBox.maximumWorld.y - boundingBox.minimumWorld.y).toFixed(3)}, ${(boundingBox.maximumWorld.z - boundingBox.minimumWorld.z).toFixed(3)})`);
+                
+                console.log(`  バウンディングスフィア:`);
+                console.log(`    中心: (${boundingSphere.center.x.toFixed(3)}, ${boundingSphere.center.y.toFixed(3)}, ${boundingSphere.center.z.toFixed(3)})`);
+                console.log(`    半径: ${boundingSphere.radius.toFixed(3)}`);
+                console.log(`    ワールド中心: (${boundingSphere.centerWorld.x.toFixed(3)}, ${boundingSphere.centerWorld.y.toFixed(3)}, ${boundingSphere.centerWorld.z.toFixed(3)})`);
+                console.log(`    ワールド半径: ${boundingSphere.radiusWorld.toFixed(3)}`);
+                
+                // ピッキング用の情報
+                console.log(`  ピッキング情報:`);
+                console.log(`    選択可能: ${mesh.isPickable}`);
+                console.log(`    有効: ${mesh.isEnabled()}`);
+                console.log(`    可視: ${mesh.visibility}`);
+                console.log(`    ジオメトリ有り: ${!!mesh.geometry}`);
+                
+                // 10%スケールの影響を分析
+                if (scale.x === 0.1 || scale.y === 0.1 || scale.z === 0.1) {
+                    const actualRadius = boundingSphere.radiusWorld;
+                    const expectedRadius = boundingSphere.radius * Math.max(scale.x, scale.y, scale.z);
+                    console.log(`  🔍 10%スケール影響分析:`);
+                    console.log(`    実際の半径: ${actualRadius.toFixed(3)}`);
+                    console.log(`    期待される半径: ${expectedRadius.toFixed(3)}`);
+                    console.log(`    差異: ${Math.abs(actualRadius - expectedRadius).toFixed(3)}`);
+                    
+                    // ピッキング判定に問題がありそうな場合の警告
+                    if (actualRadius < 0.05) {
+                        console.warn(`    ⚠️ バウンディングスフィアが非常に小さい！ピッキング判定に問題が生じる可能性があります`);
+                    }
+                }
+            } else {
+                console.warn(`  ⚠️ バウンディング情報が利用できません`);
+            }
+            
+            // メタデータ情報
+            if (mesh.metadata) {
+                console.log(`  メタデータ:`, {
+                    isAsset: mesh.metadata.isAsset,
+                    isPlacedAsset: mesh.metadata.isPlacedAsset,
+                    canMove: mesh.metadata.canMove,
+                    assetType: mesh.metadata.assetType,
+                    isPartOfAsset: mesh.metadata.isPartOfAsset
+                });
+            }
+        } catch (error) {
+            console.error(`❌ バウンディング情報の取得に失敗 [${mesh.name}]:`, error);
         }
     }
 
@@ -539,8 +623,124 @@ export class AssetPlacer {
      * @param {number} timestamp - タイムスタンプ
      */
     createBoundingBox(mesh, timestamp) {
-        const boundingBox = BABYLON.MeshBuilder.CreateBox(
-            `boundingBox_${timestamp}`, 
+        try {
+            console.log(`📦 バウンディングボックス作成開始 [${mesh.name}]`);
+            
+            // メッシュのバウンディング情報を取得
+            let boundingInfo = null;
+            let targetMesh = mesh;
+            
+            // 子メッシュがある場合は、最初の有効な子メッシュを使用
+            const childMeshes = mesh.getChildMeshes ? mesh.getChildMeshes() : [];
+            if (childMeshes.length > 0) {
+                const validChild = childMeshes.find(child => 
+                    child.geometry && child.isEnabled() && !child.isDisposed()
+                );
+                if (validChild) {
+                    targetMesh = validChild;
+                    console.log(`📦 子メッシュを使用してバウンディングボックス計算: ${validChild.name}`);
+                }
+            }
+            
+            // バウンディング情報を更新
+            targetMesh.computeWorldMatrix(true);
+            targetMesh.refreshBoundingInfo();
+            boundingInfo = targetMesh.getBoundingInfo();
+            
+            if (!boundingInfo || !boundingInfo.boundingBox) {
+                console.warn(`⚠️ バウンディング情報が取得できません。デフォルトサイズを使用: ${targetMesh.name}`);
+                // デフォルトサイズでバウンディングボックスを作成
+                this.createDefaultBoundingBox(mesh, timestamp);
+                return;
+            }
+            
+            const boundingBox = boundingInfo.boundingBox;
+            const size = {
+                width: Math.max(0.1, boundingBox.maximum.x - boundingBox.minimum.x),
+                height: Math.max(0.1, boundingBox.maximum.y - boundingBox.minimum.y),
+                depth: Math.max(0.1, boundingBox.maximum.z - boundingBox.minimum.z)
+            };
+            
+            console.log(`📦 計算されたサイズ: ${size.width.toFixed(3)} x ${size.height.toFixed(3)} x ${size.depth.toFixed(3)}`);
+            
+            // バウンディングボックスメッシュを作成
+            const visualBoundingBox = BABYLON.MeshBuilder.CreateBox(
+                `boundingBox_${timestamp}`, 
+                {
+                    width: size.width,
+                    height: size.height,  
+                    depth: size.depth
+                }, 
+                this.scene
+            );
+            
+            // 位置を設定（メッシュの中心に配置）
+            const center = boundingBox.center || mesh.position;
+            visualBoundingBox.position = center.clone();
+            
+            // スケールを適用
+            if (mesh.scaling) {
+                visualBoundingBox.scaling = mesh.scaling.clone();
+            }
+            
+            // 親を設定
+            visualBoundingBox.parent = mesh;
+            
+            // 表示設定（デフォルトでは非表示、デバッグ時のみ表示）
+            visualBoundingBox.visibility = 0.0;
+            visualBoundingBox.isPickable = false; // バウンディングボックス自体はピッキング不可
+            
+            // ワイヤーフレームマテリアルを作成
+            const wireframeMaterial = new BABYLON.StandardMaterial(`boundingBoxMaterial_${timestamp}`, this.scene);
+            wireframeMaterial.wireframe = true;
+            wireframeMaterial.emissiveColor = new BABYLON.Color3(0, 1, 0); // 緑色
+            wireframeMaterial.alpha = 0.8;
+            visualBoundingBox.material = wireframeMaterial;
+            
+            // メタデータを設定
+            visualBoundingBox.metadata = {
+                isBoundingBox: true,
+                parentAsset: mesh,
+                boundingBoxType: 'visual',
+                originalSize: size,
+                timestamp: timestamp
+            };
+            
+            // メッシュにバウンディングボックスの参照を保存
+            if (!mesh.metadata) {
+                mesh.metadata = {};
+            }
+            mesh.metadata.visualBoundingBox = visualBoundingBox;
+            
+            console.log(`✅ バウンディングボックス作成完了 [${mesh.name}] -> [${visualBoundingBox.name}]`);
+            
+            // デバッグ用にバウンディングボックス表示関数を追加
+            this.toggleBoundingBoxVisibility = (visible) => {
+                const boundingBoxes = this.scene.meshes.filter(m => 
+                    m.metadata && m.metadata.isBoundingBox
+                );
+                boundingBoxes.forEach(box => {
+                    box.visibility = visible ? 0.5 : 0.0;
+                });
+                console.log(`バウンディングボックス表示: ${visible ? 'ON' : 'OFF'} (${boundingBoxes.length}個)`);
+            };
+            
+        } catch (error) {
+            console.error(`❌ バウンディングボックス作成エラー [${mesh.name}]:`, error);
+            this.createDefaultBoundingBox(mesh, timestamp);
+        }
+    }
+    
+    /**
+     * デフォルトバウンディングボックスを作成
+     * @param {BABYLON.Mesh} mesh - メッシュ
+     * @param {number} timestamp - タイムスタンプ
+     */
+    createDefaultBoundingBox(mesh, timestamp) {
+        console.log(`📦 デフォルトバウンディングボックス作成 [${mesh.name}]`);
+        
+        const defaultBoundingBox = BABYLON.MeshBuilder.CreateBox(
+            `defaultBoundingBox_${timestamp}`, 
             {
                 width: 0.5,
                 height: 0.5,
@@ -549,14 +749,30 @@ export class AssetPlacer {
             this.scene
         );
         
-        boundingBox.position = mesh.position.clone();
-        boundingBox.parent = mesh;
-        boundingBox.visibility = 0.0;
-        boundingBox.isPickable = true;
+        defaultBoundingBox.position = mesh.position.clone();
+        defaultBoundingBox.parent = mesh;
+        defaultBoundingBox.visibility = 0.0;
+        defaultBoundingBox.isPickable = false;
         
-        // メタデータを追加
-        boundingBox.metadata = boundingBox.metadata || {};
-        boundingBox.metadata.parentAsset = mesh;
+        // ワイヤーフレームマテリアル
+        const wireframeMaterial = new BABYLON.StandardMaterial(`defaultBoundingBoxMaterial_${timestamp}`, this.scene);
+        wireframeMaterial.wireframe = true;
+        wireframeMaterial.emissiveColor = new BABYLON.Color3(1, 0, 0); // 赤色（デフォルト）
+        wireframeMaterial.alpha = 0.8;
+        defaultBoundingBox.material = wireframeMaterial;
+        
+        // メタデータを設定
+        defaultBoundingBox.metadata = {
+            isBoundingBox: true,
+            parentAsset: mesh,
+            boundingBoxType: 'default',
+            timestamp: timestamp
+        };
+        
+        if (!mesh.metadata) {
+            mesh.metadata = {};
+        }
+        mesh.metadata.visualBoundingBox = defaultBoundingBox;
     }
 
     /**
@@ -891,6 +1107,100 @@ export class AssetPlacer {
         console.log('スケール設定をリセットしました');
     }
 
+    /**
+     * バウンディングボックスの表示を切り替え
+     * @param {boolean} visible - 表示するかどうか
+     */
+    toggleBoundingBoxVisibility(visible) {
+        const boundingBoxes = this.scene.meshes.filter(m => 
+            m.metadata && m.metadata.isBoundingBox
+        );
+        boundingBoxes.forEach(box => {
+            box.visibility = visible ? 0.5 : 0.0;
+        });
+        console.log(`📦 バウンディングボックス表示: ${visible ? 'ON' : 'OFF'} (${boundingBoxes.length}個)`);
+        return boundingBoxes.length;
+    }
+    
+    /**
+     * 全アセットのバウンディング情報を一括表示
+     */
+    logAllBoundingInfo() {
+        console.log("=== 📊 全アセットバウンディング情報一括表示 ===");
+        
+        this.placedAssets.forEach((mesh, index) => {
+            console.log(`\n--- アセット ${index + 1}/${this.placedAssets.length} ---`);
+            this.logBoundingInfo(mesh, mesh.metadata?.assetType || 'unknown');
+        });
+        
+        // バウンディングボックスの統計
+        const boundingBoxes = this.scene.meshes.filter(m => 
+            m.metadata && m.metadata.isBoundingBox
+        );
+        console.log(`\n📊 バウンディングボックス統計: ${boundingBoxes.length}個作成済み`);
+        
+        const visibleBoxes = boundingBoxes.filter(box => box.visibility > 0);
+        console.log(`📊 表示中のバウンディングボックス: ${visibleBoxes.length}個`);
+    }
+    
+    /**
+     * ピッキング問題の診断
+     */
+    diagnoseBoundingIssues() {
+        console.log("=== 🔍 バウンディングスフィア・ピッキング問題診断 ===");
+        
+        const issues = [];
+        
+        this.placedAssets.forEach((mesh, index) => {
+            const boundingInfo = mesh.getBoundingInfo();
+            if (boundingInfo) {
+                const sphere = boundingInfo.boundingSphere;
+                const scale = mesh.scaling;
+                
+                // 問題1: バウンディングスフィアが極小
+                if (sphere.radiusWorld < 0.05) {
+                    issues.push({
+                        mesh: mesh.name,
+                        issue: 'バウンディングスフィアが極小',
+                        radius: sphere.radiusWorld,
+                        scale: scale.x
+                    });
+                }
+                
+                // 問題2: 10%スケールでの問題
+                if (scale.x === 0.1 && sphere.radiusWorld < 0.1) {
+                    issues.push({
+                        mesh: mesh.name,
+                        issue: '10%スケールでピッキング困難',
+                        radius: sphere.radiusWorld,
+                        scale: scale.x
+                    });
+                }
+                
+                // 問題3: ピッキング無効
+                if (!mesh.isPickable) {
+                    issues.push({
+                        mesh: mesh.name,
+                        issue: 'メッシュがピッキング無効',
+                        pickable: mesh.isPickable,
+                        enabled: mesh.isEnabled()
+                    });
+                }
+            }
+        });
+        
+        if (issues.length === 0) {
+            console.log("✅ バウンディング関連の問題は検出されませんでした");
+        } else {
+            console.log(`⚠️ ${issues.length}個の問題を検出:`);
+            issues.forEach((issue, index) => {
+                console.log(`  ${index + 1}. [${issue.mesh}] ${issue.issue}:`, issue);
+            });
+        }
+        
+        return issues;
+    }
+    
     /**
      * クリーンアップ
      */

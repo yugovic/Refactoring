@@ -12,7 +12,7 @@ window.app = null;
 let performanceMonitorInterval = null;
 
 // ソースコード最終更新日時（手動で更新）
-const SOURCE_LAST_UPDATED = '2025/06/20 22:45';
+const SOURCE_LAST_UPDATED = '2025/06/21 11:30';
 
 /**
  * アプリケーションを起動
@@ -205,3 +205,108 @@ window.addEventListener("unhandledrejection", (event) => {
 
 // DOMContentLoadedで開始
 document.addEventListener("DOMContentLoaded", startApplication);
+
+// =============================================================================
+// デバッグ用のグローバル関数（ブラウザコンソールから使用可能）
+// =============================================================================
+
+/**
+ * バウンディングボックス表示の切り替え
+ * @param {boolean} visible - 表示するかどうか
+ */
+window.toggleBoundingBoxes = function(visible = true) {
+    if (!window.app) {
+        console.error("アプリケーションが初期化されていません");
+        return;
+    }
+    
+    const assetPlacer = window.app.getManager('assetPlacer');
+    if (assetPlacer && assetPlacer.toggleBoundingBoxVisibility) {
+        const count = assetPlacer.toggleBoundingBoxVisibility(visible);
+        console.log(`バウンディングボックス表示切り替え: ${visible ? 'ON' : 'OFF'} (${count}個)`);
+        return count;
+    } else {
+        console.error("AssetPlacerが見つかりません");
+    }
+};
+
+/**
+ * 全アセットのバウンディング情報を表示
+ */
+window.logAllBounding = function() {
+    if (!window.app) {
+        console.error("アプリケーションが初期化されていません");
+        return;
+    }
+    
+    const assetPlacer = window.app.getManager('assetPlacer');
+    if (assetPlacer && assetPlacer.logAllBoundingInfo) {
+        assetPlacer.logAllBoundingInfo();
+    } else {
+        console.error("AssetPlacerが見つかりません");
+    }
+};
+
+/**
+ * バウンディング問題の診断
+ */
+window.diagnoseBounding = function() {
+    if (!window.app) {
+        console.error("アプリケーションが初期化されていません");
+        return;
+    }
+    
+    const assetPlacer = window.app.getManager('assetPlacer');
+    if (assetPlacer && assetPlacer.diagnoseBoundingIssues) {
+        return assetPlacer.diagnoseBoundingIssues();
+    } else {
+        console.error("AssetPlacerが見つかりません");
+    }
+};
+
+/**
+ * 車両のバウンディング情報を表示
+ */
+window.logVehicleBounding = function() {
+    if (!window.app) {
+        console.error("アプリケーションが初期化されていません");
+        return;
+    }
+    
+    const vehicleManager = window.app.getManager('vehicle');
+    if (vehicleManager) {
+        const placedVehicle = vehicleManager.getPlacedVehicle();
+        if (placedVehicle && vehicleManager.logVehicleBoundingInfo) {
+            vehicleManager.logVehicleBoundingInfo(placedVehicle);
+        } else {
+            console.log("配置済み車両が見つかりません");
+        }
+    } else {
+        console.error("VehicleManagerが見つかりません");
+    }
+};
+
+/**
+ * デバッグヘルプを表示
+ */
+window.debugHelp = function() {
+    console.log("=== 🔧 バウンディング調査用デバッグコマンド ===");
+    console.log("window.toggleBoundingBoxes(true)  - バウンディングボックス表示をON");
+    console.log("window.toggleBoundingBoxes(false) - バウンディングボックス表示をOFF");
+    console.log("window.logAllBounding()           - 全アセットのバウンディング情報表示");
+    console.log("window.diagnoseBounding()         - バウンディング問題の診断");
+    console.log("window.logVehicleBounding()       - 車両のバウンディング情報表示");
+    console.log("window.debugHelp()                - このヘルプを表示");
+    console.log("\n使用例:");
+    console.log("1. 車両を配置する");
+    console.log("2. window.logVehicleBounding() で詳細情報を確認");
+    console.log("3. window.toggleBoundingBoxes(true) でバウンディングボックスを表示");
+    console.log("4. window.diagnoseBounding() で問題を診断");
+};
+
+// 初回ヘルプ表示
+window.addEventListener('load', () => {
+    setTimeout(() => {
+        console.log("🔧 バウンディング調査用デバッグ関数が利用可能です。window.debugHelp() でヘルプを表示できます。");
+    }, 2000);
+});

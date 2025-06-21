@@ -275,6 +275,9 @@ export class VehicleManager {
                 isAsset: true,
                 placementTime: Date.now()
             };
+            
+            // バウンディング情報をログ出力
+            this.logVehicleBoundingInfo(clonedMesh);
 
             // 子メッシュにも親アセットの参照を設定
             if (clonedMesh.getChildMeshes) {
@@ -473,6 +476,84 @@ export class VehicleManager {
         return this.vehicleScale;
     }
 
+    /**
+     * 車両のバウンディング情報をログに出力
+     * @param {BABYLON.AbstractMesh} vehicleMesh - 車両メッシュ
+     */
+    logVehicleBoundingInfo(vehicleMesh) {
+        try {
+            console.log(`🚗 車両バウンディング情報 [${vehicleMesh.name}]:`);
+            
+            // 車両のスケール情報
+            const scale = vehicleMesh.scaling;
+            console.log(`  スケール: (${scale.x.toFixed(3)}, ${scale.y.toFixed(3)}, ${scale.z.toFixed(3)}) - ${Math.round(scale.x * 100)}%`);
+            console.log(`  位置: (${vehicleMesh.position.x.toFixed(3)}, ${vehicleMesh.position.y.toFixed(3)}, ${vehicleMesh.position.z.toFixed(3)})`);
+            
+            // メインメッシュのバウンディング情報
+            const boundingInfo = vehicleMesh.getBoundingInfo();
+            if (boundingInfo) {
+                const boundingBox = boundingInfo.boundingBox;
+                const boundingSphere = boundingInfo.boundingSphere;
+                
+                console.log(`  バウンディングボックス:`);
+                console.log(`    ローカル最小値: (${boundingBox.minimum.x.toFixed(3)}, ${boundingBox.minimum.y.toFixed(3)}, ${boundingBox.minimum.z.toFixed(3)})`);
+                console.log(`    ローカル最大値: (${boundingBox.maximum.x.toFixed(3)}, ${boundingBox.maximum.y.toFixed(3)}, ${boundingBox.maximum.z.toFixed(3)})`);
+                console.log(`    ワールド最小値: (${boundingBox.minimumWorld.x.toFixed(3)}, ${boundingBox.minimumWorld.y.toFixed(3)}, ${boundingBox.minimumWorld.z.toFixed(3)})`);
+                console.log(`    ワールド最大値: (${boundingBox.maximumWorld.x.toFixed(3)}, ${boundingBox.maximumWorld.y.toFixed(3)}, ${boundingBox.maximumWorld.z.toFixed(3)})`);
+                
+                const worldSize = {
+                    x: boundingBox.maximumWorld.x - boundingBox.minimumWorld.x,
+                    y: boundingBox.maximumWorld.y - boundingBox.minimumWorld.y,
+                    z: boundingBox.maximumWorld.z - boundingBox.minimumWorld.z
+                };
+                console.log(`    ワールドサイズ: (${worldSize.x.toFixed(3)}, ${worldSize.y.toFixed(3)}, ${worldSize.z.toFixed(3)})`);
+                
+                console.log(`  バウンディングスフィア:`);
+                console.log(`    中心: (${boundingSphere.center.x.toFixed(3)}, ${boundingSphere.center.y.toFixed(3)}, ${boundingSphere.center.z.toFixed(3)})`);
+                console.log(`    半径: ${boundingSphere.radius.toFixed(3)}`);
+                console.log(`    ワールド中心: (${boundingSphere.centerWorld.x.toFixed(3)}, ${boundingSphere.centerWorld.y.toFixed(3)}, ${boundingSphere.centerWorld.z.toFixed(3)})`);
+                console.log(`    ワールド半径: ${boundingSphere.radiusWorld.toFixed(3)}`);
+                
+                // 10%スケールの影響を分析
+                if (scale.x === 0.1) {
+                    console.log(`  🔍 10%スケール影響分析:`);
+                    console.log(`    原寸半径: ${(boundingSphere.radius / scale.x).toFixed(3)}`);
+                    console.log(`    スケール後半径: ${boundingSphere.radiusWorld.toFixed(3)}`);
+                    console.log(`    ピッキング判定半径: ${boundingSphere.radiusWorld.toFixed(3)}`);
+                    
+                    if (boundingSphere.radiusWorld < 0.1) {
+                        console.warn(`    ⚠️ バウンディングスフィアが小さすぎます！ピッキング判定が困難になる可能性があります`);
+                    }
+                }
+            }
+            
+            // 子メッシュの情報
+            const childMeshes = vehicleMesh.getChildMeshes ? vehicleMesh.getChildMeshes() : [];
+            if (childMeshes.length > 0) {
+                console.log(`  子メッシュ (${childMeshes.length}個):`);
+                childMeshes.forEach((child, index) => {
+                    const childBounding = child.getBoundingInfo();
+                    if (childBounding) {
+                        const childSphere = childBounding.boundingSphere;
+                        console.log(`    [${index}] ${child.name}: 半径=${childSphere.radiusWorld.toFixed(3)}, 選択可能=${child.isPickable}`);
+                    } else {
+                        console.log(`    [${index}] ${child.name}: バウンディング情報なし, 選択可能=${child.isPickable}`);
+                    }
+                });
+            }
+            
+            // ピッキング情報
+            console.log(`  ピッキング情報:`);
+            console.log(`    選択可能: ${vehicleMesh.isPickable}`);
+            console.log(`    有効: ${vehicleMesh.isEnabled()}`);
+            console.log(`    可視: ${vehicleMesh.visibility}`);
+            console.log(`    ジオメトリ有り: ${!!vehicleMesh.geometry}`);
+            
+        } catch (error) {
+            console.error(`❌ 車両バウンディング情報の取得に失敗 [${vehicleMesh.name}]:`, error);
+        }
+    }
+    
     /**
      * クリーンアップ
      */
