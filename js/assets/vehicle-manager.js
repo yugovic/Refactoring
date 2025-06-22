@@ -274,11 +274,11 @@ export class VehicleManager {
             // 車両メッシュをクローン
             const clonedMesh = this.currentVehicleMesh.clone(`placed_vehicle_${this.selectedVehicle.name}`);
             
+            // スケールを設定（位置調整前に設定）
+            clonedMesh.scaling = new BABYLON.Vector3(this.vehicleScale, this.vehicleScale, this.vehicleScale);
+            
             // 位置を設定
             clonedMesh.position = position.clone();
-            
-            // スケールを設定
-            clonedMesh.scaling = new BABYLON.Vector3(this.vehicleScale, this.vehicleScale, this.vehicleScale);
             
             // メッシュを有効化
             clonedMesh.setEnabled(true);
@@ -308,6 +308,18 @@ export class VehicleManager {
             
             // バウンディング情報を強制更新
             clonedMesh.refreshBoundingInfo();
+            
+            // 車両の底が床に接するように高さを調整
+            const boundingInfo = clonedMesh.getBoundingInfo();
+            if (boundingInfo) {
+                const minY = boundingInfo.boundingBox.minimumWorld.y;
+                if (minY < position.y) {
+                    // 車両が床にめり込んでいる場合、持ち上げる
+                    const offset = position.y - minY;
+                    clonedMesh.position.y += offset;
+                    console.log(`車両の高さを調整: +${offset.toFixed(3)}`);
+                }
+            }
 
             // バウンディング情報をログ出力
             this.logVehicleBoundingInfo(clonedMesh);
@@ -365,9 +377,22 @@ export class VehicleManager {
 
         // プレビューメッシュを作成
         this.previewMesh = this.currentVehicleMesh.clone(`preview_vehicle_${this.selectedVehicle.name}`);
-        this.previewMesh.position = position.clone();
         this.previewMesh.scaling = new BABYLON.Vector3(this.vehicleScale, this.vehicleScale, this.vehicleScale);
+        this.previewMesh.position = position.clone();
         this.previewMesh.setEnabled(true);
+        
+        // バウンディング情報を更新
+        this.previewMesh.refreshBoundingInfo();
+        
+        // プレビューの高さも調整
+        const boundingInfo = this.previewMesh.getBoundingInfo();
+        if (boundingInfo) {
+            const minY = boundingInfo.boundingBox.minimumWorld.y;
+            if (minY < position.y) {
+                const offset = position.y - minY;
+                this.previewMesh.position.y += offset;
+            }
+        }
 
         // プレビュー用に半透明にする
         this.makePreviewTransparent(this.previewMesh);

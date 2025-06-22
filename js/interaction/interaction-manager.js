@@ -594,6 +594,19 @@ export class InteractionManager {
         if (this.previewMesh) {
             this.previewMesh.position = position;
             
+            // 車両の高さ調整が必要な場合
+            if (this.previewMesh.metadata && this.previewMesh.metadata.needsHeightAdjustment) {
+                const boundingInfo = this.previewMesh.getBoundingInfo();
+                if (boundingInfo) {
+                    const minY = boundingInfo.boundingBox.minimumWorld.y;
+                    if (minY < position.y) {
+                        // 車両が床にめり込んでいる場合、持ち上げる
+                        const offset = position.y - minY;
+                        this.previewMesh.position.y += offset;
+                    }
+                }
+            }
+            
             // 壁配置の場合は回転
             if (wallNormal) {
                 const rotationQuaternion = BABYLON.Quaternion.FromUnitVectorsToRef(
@@ -716,6 +729,18 @@ export class InteractionManager {
                     const currentVehicle = vehicleManager.getCurrentVehicleMesh();
                     mesh = currentVehicle.clone(`preview_vehicle_${vehicleManager.getSelectedVehicle().name}`);
                     mesh.setEnabled(true);
+                    
+                    // 車両のスケールを適用
+                    const scale = vehicleManager.getVehicleScale();
+                    mesh.scaling = new BABYLON.Vector3(scale, scale, scale);
+                    
+                    // バウンディング情報を更新
+                    mesh.refreshBoundingInfo();
+                    
+                    // 車両の高さ調整（後でshowPreviewで位置が設定された後に調整される）
+                    mesh.metadata = mesh.metadata || {};
+                    mesh.metadata.needsHeightAdjustment = true;
+                    
                     this.makeTransparent(mesh);
                 } else {
                     // 車両が選択されていない場合はシンプルなプレビュー
