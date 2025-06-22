@@ -49,6 +49,9 @@ export class UIManager {
             // 1人称モードガイドを作成
             this.createFirstPersonGuide();
             
+            // デバッグモードのキーボードショートカットを設定
+            this.setupDebugShortcuts();
+            
             console.log("UIManager initialized");
             
         } catch (error) {
@@ -1447,5 +1450,87 @@ const cameraSettings = {
             // ボタンを非表示
             this.hideReturnToCameraButton();
         }
+    }
+
+    /**
+     * デバッグモードのキーボードショートカットを設定
+     */
+    setupDebugShortcuts() {
+        let debugMode = false;
+        
+        document.addEventListener('keydown', (event) => {
+            // CMD+D または Ctrl+D でデバッグモードをトグル
+            if ((event.metaKey || event.ctrlKey) && event.key === 'd') {
+                event.preventDefault();
+                debugMode = !debugMode;
+                
+                // デバッグパネルの表示/非表示を切り替え
+                const debugPanels = document.querySelectorAll('.debug-panel');
+                debugPanels.forEach(panel => {
+                    if (debugMode) {
+                        // 要素のタイプに応じて適切なdisplayスタイルを設定
+                        if (panel.tagName === 'BUTTON') {
+                            panel.style.display = 'inline-block';
+                        } else if (panel.tagName === 'DIV' && panel.classList.contains('checkbox-group')) {
+                            panel.style.display = 'block';
+                        } else {
+                            panel.style.display = 'block';
+                        }
+                        panel.style.setProperty('display', panel.style.display, 'important');
+                    } else {
+                        panel.style.setProperty('display', 'none', 'important');
+                    }
+                });
+                
+                // デバッグモードの状態を通知
+                if (debugMode) {
+                    console.log('🐛 デバッグモード: ON');
+                    this.showDebugNotification('デバッグモード: ON');
+                } else {
+                    console.log('🐛 デバッグモード: OFF');
+                    this.showDebugNotification('デバッグモード: OFF');
+                }
+            }
+        });
+    }
+
+    /**
+     * デバッグモードの通知を表示
+     * @param {string} message - 表示するメッセージ
+     */
+    showDebugNotification(message) {
+        // 既存の通知があれば削除
+        const existingNotification = document.getElementById('debugNotification');
+        if (existingNotification) {
+            existingNotification.remove();
+        }
+        
+        // 新しい通知を作成
+        const notification = document.createElement('div');
+        notification.id = 'debugNotification';
+        notification.textContent = message;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: #00ff00;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 14px;
+            z-index: 10000;
+            transition: opacity 0.3s ease-in-out;
+        `;
+        document.body.appendChild(notification);
+        
+        // フェードアウトして削除
+        setTimeout(() => {
+            notification.style.opacity = '0';
+            setTimeout(() => {
+                notification.remove();
+            }, 300);
+        }, 2000);
     }
 }

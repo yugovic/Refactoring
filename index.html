@@ -58,9 +58,9 @@
         <div class="controls-content">
         <!-- 車両配置セクション -->
         <div class="vehicle-section">
-            <h4>車両配置</h4>
-            <button id="placeVehicleBtn">車両を配置</button>
-            <button id="changeVehicleBtn">車両を変更</button>
+            <h4 class="debug-panel" style="display: none !important;">車両配置</h4>
+            <button id="placeVehicleBtn" class="debug-panel" style="display: none !important;">車両を配置</button>
+            <button id="changeVehicleBtn" class="debug-panel" style="display: none !important;">車両を変更</button>
             
             <!-- 車両情報表示 -->
             <div class="vehicle-info" id="vehicleInfo" style="display: none;">
@@ -81,7 +81,7 @@
         </div>
         
         <!-- アセットサイズ調整 -->
-        <div class="asset-scale-section">
+        <div class="asset-scale-section debug-panel" style="display: none !important;">
             <h4>アセットサイズ調整</h4>
             <div class="default-scale-controls">
                 <div class="scale-control-item">
@@ -108,7 +108,7 @@
         </div>
         
         <!-- 車両サイズ調整 -->
-        <div class="vehicle-scale-section">
+        <div class="vehicle-scale-section debug-panel" style="display: none !important;">
             <h4>車両サイズ調整</h4>
             <div class="vehicle-scale-control">
                 <label>車両サイズ: <span id="vehicleScaleValue">10%</span></label>
@@ -145,15 +145,15 @@
                 <option value="2">2.0</option>
             </select>
         </div>
-        <div class="checkbox-group">
+        <div class="checkbox-group debug-panel" style="display: none !important;">
             <input type="checkbox" id="showGridCheck" checked>
             <label for="showGridCheck">グリッド表示</label>
         </div>
-        <div class="checkbox-group">
+        <div class="checkbox-group debug-panel" style="display: none !important;">
             <input type="checkbox" id="snapToGridCheck" checked>
             <label for="snapToGridCheck">グリッドにスナップ</label>
         </div>
-        <div class="checkbox-group">
+        <div class="checkbox-group debug-panel" style="display: none !important;">
             <input type="checkbox" id="showBoundingBoxCheck">
             <label for="showBoundingBoxCheck">バウンディングボックス表示</label>
         </div>
@@ -171,7 +171,7 @@
 
 
         <!-- ライティング調整セクション -->
-        <div class="control-group">
+        <div class="control-group debug-panel" style="display: none !important;">
             <label for="lightingHeader">ライティング設定:</label>
             <div class="lighting-controls">
                 <div class="lighting-slider">
@@ -274,7 +274,7 @@
         </div>
         
         <!-- デバッグ用カメラ調整パネル -->
-        <div class="debug-panel">
+        <div class="debug-panel" style="display: none !important;">
             <h4>カメラ位置調整（デバッグ用）</h4>
             <div class="camera-controls">
                 <div class="camera-slider">
