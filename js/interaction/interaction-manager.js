@@ -264,9 +264,15 @@ export class InteractionManager {
             if (!isFloor) {
                 console.log("エラー: 車両は床にのみ配置できます。メッシュ名:", meshName);
                 this.errorHandler.showError("車両は床にのみ配置できます。");
-                // 床以外をクリックした場合は配置モードを解除
-                console.log("床以外クリックにより車両配置モードを解除");
-                this.exitPlacementMode();
+                
+                // 既に車両が配置されている場合（再配置時）のみ配置モードを解除
+                const vehicleManager = this.app.getManager('vehicle');
+                if (vehicleManager && vehicleManager.getPlacedVehicle()) {
+                    console.log("床以外クリックにより車両再配置モードを解除");
+                    this.exitPlacementMode();
+                } else {
+                    console.log("初期配置中のため車両配置モードを維持");
+                }
                 return;
             }
         } else {
