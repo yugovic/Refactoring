@@ -633,8 +633,8 @@ export class InteractionManager {
                 return;
             }
             
-            // 床配置用の位置調整（Y座標はピッキングポイントを使用）
-            position.y = pickInfo.pickedPoint.y;
+            // 床配置用の位置調整（初期値はピッキングポイント + 小さなオフセット）
+            position.y = pickInfo.pickedPoint.y + 0.01; // 床から少し浮かせる（バウンディングボックス調整前の初期値）
             
             // 統合プレビューシステムを使用
             await this.showPreview(position, null);
@@ -681,13 +681,44 @@ export class InteractionManager {
             
             // 車両の高さ調整が必要な場合
             if (this.previewMesh.metadata && this.previewMesh.metadata.needsHeightAdjustment) {
+                // ワールドマトリックスを強制的に更新
+                this.previewMesh.computeWorldMatrix(true);
+                
+                // 子メッシュのワールドマトリックスも更新
+                if (this.previewMesh.getChildMeshes) {
+                    this.previewMesh.getChildMeshes().forEach(child => {
+                        child.computeWorldMatrix(true);
+                    });
+                }
+                
+                // バウンディング情報を更新
+                this.previewMesh.refreshBoundingInfo();
+                
                 const boundingInfo = this.previewMesh.getBoundingInfo();
                 if (boundingInfo) {
                     const minY = boundingInfo.boundingBox.minimumWorld.y;
+                    const maxY = boundingInfo.boundingBox.maximumWorld.y;
+                    
+                    // 車両プレビューの場合、詳細なログを出力
+                    if (this.previewMesh.metadata.isVehiclePreview) {
+                        console.log("車両プレビューの高さ調整:", {
+                            meshName: this.previewMesh.name,
+                            currentPosition: this.previewMesh.position.y,
+                            targetFloorY: position.y,
+                            boundingMinY: minY,
+                            boundingMaxY: maxY,
+                            needsAdjustment: minY < position.y
+                        });
+                    }
+                    
                     if (minY < position.y) {
                         // 車両が床にめり込んでいる場合、持ち上げる
                         const offset = position.y - minY;
                         this.previewMesh.position.y += offset;
+                        
+                        if (this.previewMesh.metadata.isVehiclePreview) {
+                            console.log(`車両プレビューを ${offset.toFixed(3)} 単位持ち上げました`);
+                        }
                     }
                 }
             }
@@ -819,12 +850,18 @@ export class InteractionManager {
                     const scale = vehicleManager.getVehicleScale();
                     mesh.scaling = new BABYLON.Vector3(scale, scale, scale);
                     
+                    // 親メッシュのバウンディングボックスを子メッシュから再計算
+                    // VehicleManagerのrecalculateParentBoundingメソッドを直接呼び出すのではなく、
+                    // ここで同じロジックを実装（メソッドが車両マネージャー内でしか動作しない可能性があるため）
+                    this.recalculateVehiclePreviewBounding(mesh);
+                    
                     // バウンディング情報を更新
                     mesh.refreshBoundingInfo();
                     
                     // 車両の高さ調整（後でshowPreviewで位置が設定された後に調整される）
                     mesh.metadata = mesh.metadata || {};
                     mesh.metadata.needsHeightAdjustment = true;
+                    mesh.metadata.isVehiclePreview = true; // 車両プレビューであることを明示
                     
                     this.makeTransparent(mesh);
                 } else {
@@ -905,6 +942,91 @@ export class InteractionManager {
         );
         
         previewMeshes.forEach(mesh => mesh.dispose());
+    }
+
+    /**
+     * 車両プレビューメッシュのバウンディングボックスを再計算
+     * @param {BABYLON.AbstractMesh} vehicleMesh - 車両メッシュ
+     */
+    recalculateVehiclePreviewBounding(vehicleMesh) {
+        try {
+            const childMeshes = vehicleMesh.getChildMeshes ? vehicleMesh.getChildMeshes() : [];
+            
+            if (childMeshes.length === 0) {
+                console.log(`車両プレビュー ${vehicleMesh.name} に子メッシュがありません`);
+                return;
+            }
+
+            // 子メッシュの中でジオメトリを持つものを探す
+            const meshesWithGeometry = childMeshes.filter(child => 
+                child.geometry && child.getVerticesData && child.getVerticesData(BABYLON.VertexBuffer.PositionKind)
+            );
+
+            if (meshesWithGeometry.length === 0) {
+                console.log(`車両プレビュー ${vehicleMesh.name} の子メッシュにジオメトリが見つかりません`);
+                return;
+            }
+
+            // 各子メッシュのワールド座標でのバウンディングボックスを計算
+            let globalMin = null;
+            let globalMax = null;
+
+            meshesWithGeometry.forEach((child) => {
+                // 子メッシュのバウンディング情報を更新
+                child.refreshBoundingInfo();
+                const childBounding = child.getBoundingInfo();
+                
+                if (childBounding) {
+                    const worldMin = childBounding.boundingBox.minimumWorld;
+                    const worldMax = childBounding.boundingBox.maximumWorld;
+                    
+                    if (globalMin === null) {
+                        globalMin = worldMin.clone();
+                        globalMax = worldMax.clone();
+                    } else {
+                        // 最小値と最大値を更新
+                        globalMin.x = Math.min(globalMin.x, worldMin.x);
+                        globalMin.y = Math.min(globalMin.y, worldMin.y);
+                        globalMin.z = Math.min(globalMin.z, worldMin.z);
+                        
+                        globalMax.x = Math.max(globalMax.x, worldMax.x);
+                        globalMax.y = Math.max(globalMax.y, worldMax.y);
+                        globalMax.z = Math.max(globalMax.z, worldMax.z);
+                    }
+                }
+            });
+
+            if (globalMin && globalMax) {
+                // 親メッシュの逆変換マトリックスを使用して正確な変換を行う
+                vehicleMesh.computeWorldMatrix(true);
+                const parentWorldMatrix = vehicleMesh.getWorldMatrix();
+                const inverseMatrix = parentWorldMatrix.clone().invert();
+                
+                // ワールド座標からローカル座標への正確な変換
+                const localMin = BABYLON.Vector3.TransformCoordinates(globalMin, inverseMatrix);
+                const localMax = BABYLON.Vector3.TransformCoordinates(globalMax, inverseMatrix);
+                
+                // 親メッシュのバウンディング情報を新しく設定
+                const boundingMin = new BABYLON.Vector3(
+                    Math.min(localMin.x, localMax.x),
+                    Math.min(localMin.y, localMax.y),
+                    Math.min(localMin.z, localMax.z)
+                );
+                const boundingMax = new BABYLON.Vector3(
+                    Math.max(localMin.x, localMax.x),
+                    Math.max(localMin.y, localMax.y),
+                    Math.max(localMin.z, localMax.z)
+                );
+
+                // 新しいバウンディング情報を設定
+                vehicleMesh.setBoundingInfo(new BABYLON.BoundingInfo(boundingMin, boundingMax));
+                
+                console.log(`車両プレビュー ${vehicleMesh.name} のバウンディングを再計算完了`);
+            }
+
+        } catch (error) {
+            console.error(`車両プレビュー ${vehicleMesh.name} のバウンディング再計算中にエラー:`, error);
+        }
     }
 
     /**
