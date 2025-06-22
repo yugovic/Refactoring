@@ -138,7 +138,7 @@ export class InteractionManager {
         console.log("=== 配置処理開始 ===");
         
         // マウス位置でピッキングを実行（プレビューメッシュを除外）
-        const pickInfo = this.scene.pick(
+        let pickInfo = this.scene.pick(
             this.scene.pointerX,
             this.scene.pointerY,
             (mesh) => !mesh.name.startsWith('preview_'), // プレビューメッシュを除外
