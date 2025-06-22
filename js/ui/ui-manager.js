@@ -231,11 +231,15 @@ export class UIManager {
             this.elements.placeVehicleBtn.addEventListener("click", () => {
                 const vehicleManager = this.app.getManager('vehicle');
                 if (vehicleManager.hasSelectedVehicle()) {
-                    this.resetAssetButtons();
-                    this.elements.placeVehicleBtn.classList.add("active");
-                    this.app.getManager('interaction').setVehiclePlacementMode();
+                    // すでに車両配置モードの場合は何もしない
+                    const interactionManager = this.app.getManager('interaction');
+                    if (interactionManager.getCurrentMode() !== 'vehicle') {
+                        this.resetAssetButtons();
+                        this.elements.placeVehicleBtn.classList.add("active");
+                        interactionManager.setVehiclePlacementMode();
+                    }
                 } else {
-                    alert('まず車両を選択してください');
+                    alert('車両を読み込み中です。しばらくお待ちください。');
                 }
             });
         }

@@ -859,6 +859,14 @@ export class InteractionManager {
     }
 
     /**
+     * 現在のモードを取得
+     * @returns {string|null}
+     */
+    getCurrentMode() {
+        return this.currentMode;
+    }
+
+    /**
      * 配置モードを設定
      * @param {string} mode - アセットタイプ
      */
