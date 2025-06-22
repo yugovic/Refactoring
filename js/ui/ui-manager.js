@@ -1186,6 +1186,16 @@ const cameraSettings = {
     }
 
     /**
+     * 車両配置ボタンをアクティブにする
+     */
+    activateVehiclePlacementButton() {
+        this.resetAssetButtons();
+        if (this.elements.placeVehicleBtn) {
+            this.elements.placeVehicleBtn.classList.add("active");
+        }
+    }
+
+    /**
      * 配置済み車両にカメラをフォーカス
      */
     focusOnVehicle() {

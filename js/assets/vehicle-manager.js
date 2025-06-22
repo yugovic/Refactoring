@@ -8,6 +8,7 @@ export class VehicleManager {
         this.scene = scene;
         this.assetLoader = assetLoader;
         this.errorHandler = errorHandler;
+        this.app = null; // 後で設定される
         
         // 利用可能な車両データ
         this.availableVehicles = {
@@ -58,6 +59,14 @@ export class VehicleManager {
     initialize() {
         this.initializeModal();
         console.log('VehicleManager initialized successfully');
+    }
+    
+    /**
+     * Appインスタンスを設定
+     * @param {App} app 
+     */
+    setApp(app) {
+        this.app = app;
     }
 
     /**
@@ -206,6 +215,19 @@ export class VehicleManager {
                 this.hideModal();
                 
                 console.log(`Vehicle ${vehicle.displayName} selected and ready for placement`);
+                
+                // 車両選択後、自動的に配置モードを有効にする
+                const interactionManager = this.app?.getManager?.('interaction');
+                if (interactionManager) {
+                    interactionManager.setPlacementMode('vehicle');
+                    console.log('Vehicle placement mode activated automatically');
+                }
+                
+                // UIの車両配置ボタンもアクティブにする
+                const uiManager = this.app?.getManager?.('ui');
+                if (uiManager) {
+                    uiManager.activateVehiclePlacementButton();
+                }
                 
                 console.log(`Vehicle ${vehicle.displayName} loaded successfully`);
             } else {

@@ -81,6 +81,7 @@ export class App {
             this.managers.upload.initialize();
             
             // 車両マネージャーを初期化
+            this.managers.vehicle.setApp(this);
             this.managers.vehicle.initialize();
             
             // オーディオマネージャーを初期化
@@ -101,25 +102,13 @@ export class App {
             console.log("Application initialized successfully");
             
             // ローディング表示を非表示
-            setTimeout(async () => {
+            setTimeout(() => {
                 this.loadingManager.hide();
-                // デフォルト車両を自動選択（モーダルは表示しない）
-                setTimeout(async () => {
-                    console.log('Auto-selecting default vehicle...');
+                // 車両選択モーダルを表示（少し遅延させてDOM要素が確実に読み込まれるようにする）
+                setTimeout(() => {
+                    console.log('Attempting to show vehicle modal...');
                     if (this.managers.vehicle) {
-                        // 最初の車両を自動選択
-                        const vehicles = this.managers.vehicle.getAvailableVehicles();
-                        const firstVehicleKey = Object.keys(vehicles)[0];
-                        if (firstVehicleKey) {
-                            await this.managers.vehicle.selectVehicle(firstVehicleKey);
-                            console.log(`Default vehicle selected: ${vehicles[firstVehicleKey].displayName}`);
-                            
-                            // InteractionManagerを車両配置モードに設定
-                            if (this.managers.interaction) {
-                                this.managers.interaction.setPlacementMode('vehicle');
-                                console.log('Vehicle placement mode activated');
-                            }
-                        }
+                        this.managers.vehicle.showModal();
                     } else {
                         console.error('VehicleManager not available');
                     }

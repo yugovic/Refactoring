@@ -149,6 +149,25 @@ export class InteractionManager {
         if (!pickInfo.hit || !pickInfo.pickedPoint) {
             console.log("エラー: ピッキングに失敗しました");
             this.errorHandler.showError("配置できません。有効な場所をクリックしてください。");
+            // 車両配置モードの場合は解除
+            if (this.currentMode === 'vehicle') {
+                console.log("部屋外クリックにより車両配置モードを解除");
+                this.exitPlacementMode();
+            }
+            return;
+        }
+        
+        // スカイボックスや背景要素をクリックした場合
+        const pickedMeshName = pickInfo.pickedMesh.name.toLowerCase();
+        if (pickedMeshName === 'skybox' || 
+            pickedMeshName.includes('background') || 
+            pickedMeshName.includes('sky')) {
+            console.log("背景要素クリックを検出");
+            // 車両配置モードの場合は解除
+            if (this.currentMode === 'vehicle') {
+                console.log("背景クリックにより車両配置モードを解除");
+                this.exitPlacementMode();
+            }
             return;
         }
         
@@ -206,6 +225,20 @@ export class InteractionManager {
             targetMesh = pickInfo.pickedMesh;
         }
         
+        // 環境要素（木や建物など）をチェック
+        if (targetMesh.name.includes("tree") || 
+            targetMesh.name.includes("building") ||
+            targetMesh.name.includes("environment") ||
+            (targetMesh.metadata && targetMesh.metadata.isEnvironmentObject)) {
+            console.log("環境要素クリックを検出:", targetMesh.name);
+            // 車両配置モードの場合は解除
+            if (this.currentMode === 'vehicle') {
+                console.log("環境要素クリックにより車両配置モードを解除");
+                this.exitPlacementMode();
+            }
+            return;
+        }
+        
         // 配置可能な場所かチェック
         const meshName = targetMesh.name.toLowerCase();
         const isFloor = meshName.includes("floor") || 
@@ -230,7 +263,10 @@ export class InteractionManager {
         if (this.currentMode === 'vehicle') {
             if (!isFloor) {
                 console.log("エラー: 車両は床にのみ配置できます。メッシュ名:", meshName);
-                this.errorHandler.showError("車両は床にのみ配置できます。床をクリックしてください。");
+                this.errorHandler.showError("車両は床にのみ配置できます。");
+                // 床以外をクリックした場合は配置モードを解除
+                console.log("床以外クリックにより車両配置モードを解除");
+                this.exitPlacementMode();
                 return;
             }
         } else {
@@ -370,6 +406,39 @@ export class InteractionManager {
      */
     handleSelection(pickResult) {
         if (pickResult.hit) {
+            const pickedMeshName = pickResult.pickedMesh.name.toLowerCase();
+            
+            // スカイボックスや背景要素をクリックした場合は選択解除
+            if (pickedMeshName === 'skybox' || 
+                pickedMeshName.includes('background') || 
+                pickedMeshName.includes('sky')) {
+                console.log("背景要素クリックにより選択を解除");
+                this.selectionController.deselectAll();
+                
+                // カメラコントロールを有効化
+                const activeCamera = this.camera.getActiveCamera();
+                if (activeCamera) {
+                    activeCamera.attachControl(this.canvas, true);
+                }
+                return;
+            }
+            
+            // 環境要素をクリックした場合も選択解除
+            if (pickResult.pickedMesh.name.includes("tree") || 
+                pickResult.pickedMesh.name.includes("building") ||
+                pickResult.pickedMesh.name.includes("environment") ||
+                (pickResult.pickedMesh.metadata && pickResult.pickedMesh.metadata.isEnvironmentObject)) {
+                console.log("環境要素クリックにより選択を解除");
+                this.selectionController.deselectAll();
+                
+                // カメラコントロールを有効化
+                const activeCamera = this.camera.getActiveCamera();
+                if (activeCamera) {
+                    activeCamera.attachControl(this.canvas, true);
+                }
+                return;
+            }
+            
             const selectedMesh = this.selectionController.selectFromPickResult(pickResult);
             
             if (selectedMesh) {
@@ -404,6 +473,16 @@ export class InteractionManager {
                 if (activeCamera && !this.selectionController.hasSelection()) {
                     activeCamera.attachControl(this.canvas, true);
                 }
+            }
+        } else {
+            // 何もヒットしなかった場合（部屋の外をクリック）も選択解除
+            console.log("部屋外クリックにより選択を解除");
+            this.selectionController.deselectAll();
+            
+            // カメラコントロールを有効化
+            const activeCamera = this.camera.getActiveCamera();
+            if (activeCamera) {
+                activeCamera.attachControl(this.canvas, true);
             }
         }
     }
@@ -548,8 +627,8 @@ export class InteractionManager {
                 return;
             }
             
-            // 床配置用の位置調整（Y座標を固定）
-            position.y = 0.01;
+            // 床配置用の位置調整（Y座標はピッキングポイントを使用）
+            position.y = pickInfo.pickedPoint.y;
             
             // 統合プレビューシステムを使用
             await this.showPreview(position, null);
