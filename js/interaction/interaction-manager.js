@@ -387,11 +387,14 @@ export class InteractionManager {
                 this.errorHandler.showError(`アセットの配置に失敗しました: ${error.message}`);
                 return;
             }
-        } else if (this.currentMode !== 'uploaded_asset') {
+        } else if (this.currentMode === 'facility' && this.currentFacilityFile) {
+            console.log("ファシリティアセットを配置:", this.currentFacilityFile);
+            placedMesh = await this.assetPlacer.placeFacilityAsset(this.currentFacilityFile, hitPoint);
+        } else if (this.currentMode !== 'uploaded_asset' && this.currentMode !== 'facility') {
             // 通常のアセットを配置
             placedMesh = this.assetPlacer.placeAsset(this.currentMode, hitPoint);
         } else {
-            console.error("アップロードアセットが選択されていません");
+            console.error("アセットが選択されていません");
             this.errorHandler.showError("アセットが選択されていません。");
             return;
         }
@@ -1102,11 +1105,25 @@ export class InteractionManager {
     }
 
     /**
+     * ファシリティ配置モードを設定
+     * @param {string} assetFile - アセットファイル名
+     */
+    setFacilityPlacementMode(assetFile) {
+        console.log(`=== ファシリティ配置モード設定: ${assetFile} ===`);
+        this.exitPlacementMode();
+        this.isPlacing = true;
+        this.currentMode = 'facility';
+        this.currentFacilityFile = assetFile;
+        console.log(`ファシリティ配置モード設定完了: ${assetFile}`);
+    }
+
+    /**
      * 配置モードを終了
      */
     exitPlacementMode() {
         this.isPlacing = false;
         this.currentMode = null;
+        this.currentFacilityFile = null;
         this.cleanupPreview();
         this.gridSystem.hideVerticalHelper();
         

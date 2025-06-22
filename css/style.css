@@ -381,6 +381,132 @@ html, body {
     box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.3);
 }
 
+/* ビジュアルグリッドカタログ */
+.asset-catalog {
+    margin-top: 10px;
+}
+
+.asset-category {
+    margin-bottom: 15px;
+}
+
+.category-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    margin-bottom: 10px;
+}
+
+.category-header:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+.category-header h5 {
+    margin: 0;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.category-toggle {
+    color: #fff;
+    font-size: 18px;
+    font-weight: bold;
+    transition: transform 0.3s ease;
+}
+
+.category-header.collapsed .category-toggle {
+    transform: rotate(-90deg);
+}
+
+.asset-grid,
+.facility-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 15px;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+    max-height: 500px;
+    opacity: 1;
+}
+
+.asset-grid.collapsed,
+.facility-grid.collapsed {
+    max-height: 0;
+    opacity: 0;
+    margin-bottom: 0;
+}
+
+.asset-item {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.asset-item:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: #4CAF50;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.asset-item.selected {
+    background-color: rgba(76, 175, 80, 0.3);
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 2px #4CAF50;
+}
+
+.asset-icon {
+    font-size: 24px;
+    margin-bottom: 5px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ファシリティアセットの数字アイコン */
+.facility-grid .asset-icon {
+    font-size: 20px;
+    font-weight: bold;
+    color: #fff;
+    background-color: rgba(255, 255, 255, 0.2);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    margin: 0 auto 5px auto;
+    line-height: 40px;
+}
+
+.asset-name {
+    font-size: 11px;
+    color: #fff;
+    opacity: 0.9;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 320px) {
+    .asset-grid,
+    .facility-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
 /* 1人称モード用の操作ガイド */
 .first-person-guide {
     position: absolute;

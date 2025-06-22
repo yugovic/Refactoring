@@ -223,6 +223,9 @@ export class UIManager {
         
         // 車両フォーカスボタン
         this.setupVehicleFocusButton();
+        
+        // カテゴリー折りたたみ機能
+        this.setupCategoryToggles();
     }
 
     /**
@@ -255,7 +258,56 @@ export class UIManager {
             });
         }
         
-        // アセット配置ボタン
+        // ビジュアルグリッドのアセットアイテム
+        const assetItems = document.querySelectorAll('.asset-item');
+        assetItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const assetType = item.dataset.assetType;
+                const assetFile = item.dataset.assetFile;
+                
+                // 全てのアイテムの選択状態をリセット
+                assetItems.forEach(i => i.classList.remove('selected'));
+                item.classList.add('selected');
+                
+                if (assetType === 'facility' && assetFile) {
+                    // ファシリティアセットの場合
+                    console.log(`=== ファシリティアセット選択: ${assetFile} ===`);
+                    this.resetAssetButtons();
+                    const interactionManager = this.app.getManager('interaction');
+                    interactionManager.setFacilityPlacementMode(assetFile);
+                } else {
+                    // 既存アセットの場合
+                    const typeMap = {
+                        'cube': ASSET_TYPES.CUBE,
+                        'record': ASSET_TYPES.RECORD_MACHINE,
+                        'juiceBox': ASSET_TYPES.JUICE_BOX,
+                        'mikeDesk': ASSET_TYPES.MIKE_DESK,
+                        'trophy': ASSET_TYPES.TROPHY
+                    };
+                    
+                    const mappedType = typeMap[assetType];
+                    if (mappedType) {
+                        console.log(`=== アセット選択: ${mappedType} ===`);
+                        this.resetAssetButtons();
+                        // 対応する隠しボタンをクリック
+                        const buttonMap = {
+                            'cube': this.elements.cubeBtn,
+                            'record': this.elements.recordBtn,
+                            'juiceBox': this.elements.juiceBoxBtn,
+                            'mikeDesk': this.elements.mikeDeskBtn,
+                            'trophy': this.elements.trophyBtn
+                        };
+                        const button = buttonMap[assetType];
+                        if (button) {
+                            button.classList.add("active");
+                        }
+                        this.app.getManager('interaction').setPlacementMode(mappedType);
+                    }
+                }
+            });
+        });
+        
+        // 既存のボタンイベント（互換性のため残す）
         const buttons = [
             { element: this.elements.cubeBtn, type: ASSET_TYPES.CUBE },
             { element: this.elements.recordBtn, type: ASSET_TYPES.RECORD_MACHINE },
@@ -1239,6 +1291,45 @@ const cameraSettings = {
                 this.showReturnToCameraButton();
             }
         });
+    }
+
+    /**
+     * カテゴリー折りたたみ機能を設定
+     */
+    setupCategoryToggles() {
+        // メインカテゴリー
+        const mainHeader = document.getElementById('mainCategoryHeader');
+        const mainGrid = document.getElementById('mainAssetGrid');
+        
+        if (mainHeader && mainGrid) {
+            mainHeader.addEventListener('click', () => {
+                mainHeader.classList.toggle('collapsed');
+                mainGrid.classList.toggle('collapsed');
+                
+                // トグルアイコンの更新
+                const toggle = mainHeader.querySelector('.category-toggle');
+                if (toggle) {
+                    toggle.textContent = mainHeader.classList.contains('collapsed') ? '+' : '−';
+                }
+            });
+        }
+        
+        // ファシリティカテゴリー
+        const facilityHeader = document.getElementById('facilityCategoryHeader');
+        const facilityGrid = document.getElementById('facilityAssetGrid');
+        
+        if (facilityHeader && facilityGrid) {
+            facilityHeader.addEventListener('click', () => {
+                facilityHeader.classList.toggle('collapsed');
+                facilityGrid.classList.toggle('collapsed');
+                
+                // トグルアイコンの更新
+                const toggle = facilityHeader.querySelector('.category-toggle');
+                if (toggle) {
+                    toggle.textContent = facilityHeader.classList.contains('collapsed') ? '+' : '−';
+                }
+            });
+        }
     }
 
     /**

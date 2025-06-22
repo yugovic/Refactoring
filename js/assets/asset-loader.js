@@ -460,6 +460,28 @@ export class AssetLoader {
     }
 
     /**
+     * デフォルトスケールを取得
+     * @param {string} assetType - アセットタイプ
+     * @returns {Object} スケール値
+     */
+    getDefaultScale(assetType) {
+        switch(assetType) {
+            case 'burger':
+                return MODEL_SCALES.BURGER;
+            case 'recordMachine':
+                return MODEL_SCALES.RECORD_MACHINE;
+            case 'juiceBox':
+                return MODEL_SCALES.JUICE_BOX;
+            case 'trophy':
+                return MODEL_SCALES.TROPHY;
+            case 'facility':
+                return MODEL_SCALES.DEFAULT;
+            default:
+                return MODEL_SCALES.DEFAULT;
+        }
+    }
+
+    /**
      * ロード完了時のコールバックを追加
      * @param {Function} callback - コールバック関数
      */

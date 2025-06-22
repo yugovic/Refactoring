@@ -242,6 +242,70 @@ export class AssetPlacer {
     }
 
     /**
+     * ファシリティアセットを配置
+     * @param {string} assetFile - アセットファイル名
+     * @param {BABYLON.Vector3} position - 配置位置
+     * @returns {Promise<BABYLON.Mesh|null>}
+     */
+    async placeFacilityAsset(assetFile, position) {
+        try {
+            const assetPath = `./assets/Facilities/${assetFile}`;
+            const timestamp = Date.now();
+            const assetName = assetFile.replace('.glb', '');
+            const meshName = `facility_${assetName}_${timestamp}`;
+            
+            console.log(`ファシリティアセットをロード: ${assetPath}`);
+            
+            // GLBファイルをロード
+            const result = await BABYLON.SceneLoader.LoadAssetContainerAsync(
+                "",
+                assetPath,
+                this.scene
+            );
+            
+            // メッシュを追加
+            result.addAllToScene();
+            
+            // ルートメッシュを取得
+            const rootMesh = result.meshes[0];
+            if (!rootMesh) {
+                console.error("ルートメッシュが見つかりません");
+                return null;
+            }
+            
+            // メッシュ名を設定
+            rootMesh.name = meshName;
+            
+            // デフォルトスケールを適用（10%）
+            const scale = this.assetLoader.getDefaultScale('facility');
+            rootMesh.scaling = new BABYLON.Vector3(scale.x, scale.y, scale.z);
+            
+            // 位置設定
+            this.positionAssetOnFloor(rootMesh, position);
+            
+            // インタラクション設定
+            this.setupMeshInteraction(rootMesh, 'facility');
+            
+            // バウンディングボックスを作成
+            this.createBoundingBox(rootMesh, timestamp);
+            
+            // 子メッシュの処理
+            this.processChildMeshes(rootMesh);
+            
+            // 影の設定
+            this.setupShadows(rootMesh);
+            
+            console.log(`ファシリティアセット配置完了: ${meshName}`);
+            return rootMesh;
+            
+        } catch (error) {
+            console.error("ファシリティアセット配置エラー:", error);
+            this.errorHandler.showError(`アセットの配置に失敗しました: ${error.message}`);
+            return null;
+        }
+    }
+
+    /**
      * アセットを床面に正しく配置
      * @param {BABYLON.Mesh} mesh - 配置するメッシュ
      * @param {BABYLON.Vector3} position - 基準位置

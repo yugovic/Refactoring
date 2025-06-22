@@ -73,11 +73,90 @@
         <!-- アセット配置セクション -->
         <div class="asset-section">
             <h4>アセット配置</h4>
-            <button id="cubeBtn">バーガーを配置</button>
-            <button id="recordBtn">レコードマシンを配置</button>
-            <button id="juiceBoxBtn">ジュースボックスを配置</button>
-            <button id="mikeDeskBtn">マイクデスクを配置</button>
-            <button id="trophyBtn">トロフィーを配置</button>
+            
+            <!-- ビジュアルグリッドカタログ -->
+            <div class="asset-catalog">
+                <!-- メインアセット -->
+                <div class="asset-category">
+                    <div class="category-header" id="mainCategoryHeader">
+                        <h5>メイン</h5>
+                        <span class="category-toggle">−</span>
+                    </div>
+                    <div class="asset-grid" id="mainAssetGrid">
+                        <div class="asset-item" data-asset-type="cube">
+                            <div class="asset-icon">🍔</div>
+                            <div class="asset-name">バーガー</div>
+                        </div>
+                        <div class="asset-item" data-asset-type="record">
+                            <div class="asset-icon">🎵</div>
+                            <div class="asset-name">レコード</div>
+                        </div>
+                        <div class="asset-item" data-asset-type="juiceBox">
+                            <div class="asset-icon">🥤</div>
+                            <div class="asset-name">ジュース</div>
+                        </div>
+                        <div class="asset-item" data-asset-type="mikeDesk">
+                            <div class="asset-icon">🎤</div>
+                            <div class="asset-name">マイク</div>
+                        </div>
+                        <div class="asset-item" data-asset-type="trophy">
+                            <div class="asset-icon">🏆</div>
+                            <div class="asset-name">トロフィー</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- ファシリティアセット -->
+                <div class="asset-category">
+                    <div class="category-header" id="facilityCategoryHeader">
+                        <h5>ファシリティ</h5>
+                        <span class="category-toggle">−</span>
+                    </div>
+                    <div class="facility-grid" id="facilityAssetGrid">
+                    <div class="asset-item" data-asset-type="facility" data-asset-file="0001_factory_bloc.glb">
+                        <div class="asset-icon">1</div>
+                        <div class="asset-name">Factory Bloc</div>
+                    </div>
+                    <div class="asset-item" data-asset-type="facility" data-asset-file="0002_factory_condenser.glb">
+                        <div class="asset-icon">2</div>
+                        <div class="asset-name">Condenser</div>
+                    </div>
+                    <div class="asset-item" data-asset-type="facility" data-asset-file="0003_factory_controller.glb">
+                        <div class="asset-icon">3</div>
+                        <div class="asset-name">Controller</div>
+                    </div>
+                    <div class="asset-item" data-asset-type="facility" data-asset-file="0004_factory_fanmachine.glb">
+                        <div class="asset-icon">4</div>
+                        <div class="asset-name">Fan Machine</div>
+                    </div>
+                    <div class="asset-item" data-asset-type="facility" data-asset-file="0005_factory_steal.glb">
+                        <div class="asset-icon">5</div>
+                        <div class="asset-name">Factory Steel</div>
+                    </div>
+                    <div class="asset-item" data-asset-type="facility" data-asset-file="0006_hardfence.glb">
+                        <div class="asset-icon">6</div>
+                        <div class="asset-name">Hard Fence</div>
+                    </div>
+                    <div class="asset-item" data-asset-type="facility" data-asset-file="0007_lighting.glb">
+                        <div class="asset-icon">7</div>
+                        <div class="asset-name">Lighting</div>
+                    </div>
+                    <div class="asset-item" data-asset-type="facility" data-asset-file="0008_paulfence.glb">
+                        <div class="asset-icon">8</div>
+                        <div class="asset-name">Paul Fence</div>
+                    </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 既存のボタン（非表示） -->
+            <div style="display: none;">
+                <button id="cubeBtn">バーガーを配置</button>
+                <button id="recordBtn">レコードマシンを配置</button>
+                <button id="juiceBoxBtn">ジュースボックスを配置</button>
+                <button id="mikeDeskBtn">マイクデスクを配置</button>
+                <button id="trophyBtn">トロフィーを配置</button>
+            </div>
         </div>
         
         <!-- アセットサイズ調整 -->
