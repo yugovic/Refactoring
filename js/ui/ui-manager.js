@@ -410,7 +410,9 @@ export class UIManager {
         intensityControls.forEach(({ element, type, property }) => {
             if (element) {
                 element.addEventListener("input", (e) => {
-                    lightingSystem.updateSetting(type, property, parseFloat(e.target.value));
+                    let value = parseFloat(e.target.value);
+                    
+                    lightingSystem.updateSetting(type, property, value);
                     
                     // ポイントライト2も同時に更新
                     if (type === 'pointLight1' && property === 'intensity') {

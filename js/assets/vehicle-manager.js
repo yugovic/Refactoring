@@ -365,6 +365,9 @@ export class VehicleManager {
             // 配置済み車両として保存
             this.placedVehicleMesh = clonedMesh;
 
+            // 影の設定
+            this.setupVehicleShadows(clonedMesh);
+
             console.log(`Placed vehicle ${this.selectedVehicle.displayName} at position:`, position);
             
             // フォーカスボタンを有効化するためにUI更新
@@ -662,6 +665,53 @@ export class VehicleManager {
 
         } catch (error) {
             console.error(`❌ 車両 ${parentMesh.name} のバウンディング再計算中にエラー:`, error);
+        }
+    }
+
+    /**
+     * 車両の影を設定
+     * @param {BABYLON.AbstractMesh} vehicleMesh - 車両メッシュ
+     */
+    setupVehicleShadows(vehicleMesh) {
+        try {
+            // LightingSystemを取得
+            const lightingSystem = this.app?.getManager?.('lighting');
+            if (!lightingSystem || !lightingSystem.getShadowGenerator()) {
+                console.warn('影の設定をスキップ: ShadowGeneratorが利用できません');
+                return;
+            }
+
+            // 親メッシュをシャドウキャスターとして追加
+            lightingSystem.addShadowCaster(vehicleMesh);
+            
+            // 子メッシュもシャドウキャスターとして追加
+            const childMeshes = vehicleMesh.getChildMeshes();
+            childMeshes.forEach(child => {
+                // ジオメトリを持つメッシュのみシャドウキャスターとして追加
+                if (child.geometry && child.isVisible) {
+                    lightingSystem.addShadowCaster(child);
+                }
+            });
+
+            console.log(`車両 ${vehicleMesh.name} を影キャスターとして設定`);
+            
+            // デバッグ用: 車両配置後に影の診断を実行
+            setTimeout(() => {
+                console.log('=== 車両配置後の影診断 ===');
+                lightingSystem.diagnoseShadows();
+                
+                // 床が影を受け取るようになっているか確認
+                const ground = this.scene.getMeshByName('defaultGround') || this.scene.getMeshByName('floor');
+                if (ground) {
+                    console.log(`床メッシュ ${ground.name} - receiveShadows: ${ground.receiveShadows}`);
+                    if (!ground.receiveShadows) {
+                        console.warn('⚠️ 床が影を受け取る設定になっていません！');
+                    }
+                }
+            }, 500);
+
+        } catch (error) {
+            console.error('車両の影設定中にエラー:', error);
         }
     }
 

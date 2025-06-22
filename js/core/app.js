@@ -166,8 +166,20 @@ export class App {
             this.managers.lighting.setupLights();
             
             // シャドウレシーバーとキャスターを設定
-            this.managers.lighting.setShadowReceivers(this.managers.room.getShadowReceivers());
-            this.managers.lighting.setShadowCasters(this.managers.room.getShadowCasters());
+            console.log('=== シャドウレシーバー/キャスターの設定 ===');
+            const shadowReceivers = this.managers.room.getShadowReceivers();
+            const shadowCasters = this.managers.room.getShadowCasters();
+            console.log(`シャドウレシーバー数: ${shadowReceivers.length}`);
+            console.log(`シャドウキャスター数: ${shadowCasters.length}`);
+            
+            this.managers.lighting.setShadowReceivers(shadowReceivers);
+            this.managers.lighting.setShadowCasters(shadowCasters);
+            
+            // デバッグ: 影の診断を実行
+            setTimeout(() => {
+                console.log('=== アプリケーション起動後の影診断 ===');
+                this.managers.lighting.diagnoseShadows();
+            }, 1000);
             
             // AssetPlacerにシャドウジェネレーターを設定
             this.managers.assetPlacer.setShadowGenerator(this.managers.lighting.getShadowGenerator());

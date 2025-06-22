@@ -37,7 +37,7 @@ export const DEFAULT_SETTINGS = {
             position: { x: -5, y: 8, z: -5 }
         },
         shadow: {
-            darkness: 0.2
+            darkness: 0  // 初期値を0に設定
         },
         reduceShininess: true
     },

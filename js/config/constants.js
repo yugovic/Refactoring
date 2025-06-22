@@ -141,14 +141,15 @@ export const LIGHTING_SETTINGS = {
 
 // シャドウ設定（独立したエクスポート）
 export const SHADOW_SETTINGS = {
-    RESOLUTION: 1024,           // シャドウマップの解像度
+    RESOLUTION: 1024,           // シャドウマップの解像度を上げて品質向上
     USE_BLUR: true,            // ブラーを使用するか
-    USE_PCF: true,             // PCFフィルタリングを使用するか
-    BIAS: 0.00001,             // シャドウのバイアス
-    NORMAL_BIAS: 0.000001,     // 法線バイアス
+    USE_PCF: false,            // PCFフィルタリングを無効化（パフォーマンス優先）
+    BIAS: 0.005,               // シャドウのバイアスを増やしてアクネを防ぐ
+    NORMAL_BIAS: 0.001,        // 法線バイアスも増やす
     DEPTH_SCALE: 50,           // 深度スケール
-    DARKNESS: 0.3,             // 影の暗さ
-    BLUR: 2                    // ブラーの強度
+    DARKNESS: 0,               // 影の暗さ（初期値0）
+    BLUR: 2,                   // ブラーの強度
+    FRUSTUM_EDGE_FALLOFF: 0   // フラスタムエッジのフォールオフを無効化
 };
 
 // プリセット色

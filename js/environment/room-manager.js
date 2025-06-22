@@ -38,8 +38,8 @@ export class RoomManager {
                 this.createDefaultFloor();
             }
             
-            // 影の受け取り用の透明床を作成
-            this.createShadowFloor();
+            // 影の受け取り用の透明床を作成（一時的に無効化）
+            // this.createShadowFloor();
             
             console.log("Room loaded successfully");
             
@@ -91,6 +91,8 @@ export class RoomManager {
         
         // ルートメッシュをroom meshリストに追加
         this.roomMeshes.push(rootMesh);
+        
+        console.log(`=== 部屋メッシュの処理開始 (合計: ${meshes.length}個) ===`);
         
         // 全メッシュを処理
         meshes.forEach((mesh, index) => {
@@ -167,6 +169,7 @@ export class RoomManager {
         mesh.metadata.interactionTag = 'floor';
         
         this.shadowReceivers.push(mesh);
+        console.log(`✅ 床メッシュ ${mesh.name} をシャドウレシーバーとして追加`);
     }
 
     /**
@@ -255,8 +258,8 @@ export class RoomManager {
         const shadowGround = BABYLON.MeshBuilder.CreateGround(
             "shadowGround",
             {
-                width: 50,
-                height: 50,
+                width: Math.abs(this.roomBoundary.MAX_X - this.roomBoundary.MIN_X),  // 部屋と同じサイズ
+                height: Math.abs(this.roomBoundary.MAX_Z - this.roomBoundary.MIN_Z),
                 subdivisions: 4
             },
             this.scene
@@ -265,27 +268,37 @@ export class RoomManager {
         shadowGround.position.y = 0.001;
         shadowGround.isPickable = false;
         
-        // 透明なマテリアル
+        // 影専用の透明マテリアル
         const shadowMaterial = new BABYLON.StandardMaterial("shadowMaterial", this.scene);
-        shadowMaterial.alpha = 0.01;
-        shadowMaterial.diffuseColor = new BABYLON.Color3(1, 1, 1);
+        shadowMaterial.alpha = 0.01;  // ほぼ透明（影だけが見える）
+        shadowMaterial.diffuseColor = new BABYLON.Color3(1, 1, 1);  // 白
+        shadowMaterial.specularColor = new BABYLON.Color3(0, 0, 0);  // 反射なし
+        shadowMaterial.emissiveColor = new BABYLON.Color3(0, 0, 0);  // 発光なし
         shadowMaterial.backFaceCulling = false;
         shadowGround.material = shadowMaterial;
         
         shadowGround.receiveShadows = true;
         this.shadowReceivers.push(shadowGround);
+        console.log('✅ 影受け取り用の床を作成');
     }
 
     /**
      * 影の設定
      */
     setupShadows() {
-        // 床以外のオブジェクトは影を落とす
+        // 床と壁以外のオブジェクトは影を落とす
         this.roomMeshes.forEach(mesh => {
-            if (mesh !== this.ground && !mesh.metadata?.isFloor) {
+            if (mesh !== this.ground && 
+                !mesh.metadata?.isFloor && 
+                !mesh.metadata?.isWall &&
+                mesh.name !== 'Floor' &&
+                mesh.name !== 'Wall' &&
+                !mesh.name.toLowerCase().includes('floor') &&
+                !mesh.name.toLowerCase().includes('wall')) {
                 this.shadowCasters.push(mesh);
             }
         });
+        console.log(`影を落とすオブジェクト数: ${this.shadowCasters.length}`);
     }
 
     /**

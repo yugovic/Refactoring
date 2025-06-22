@@ -120,10 +120,16 @@ export class LightingSystem {
         );
         
         // 影の投影設定
-        this.directionalLight.shadowMinZ = 1;
+        this.directionalLight.shadowMinZ = 0.1;    // より近くから影を生成
         this.directionalLight.shadowMaxZ = 100;
-        this.directionalLight.autoUpdateExtends = true;
-        this.directionalLight.shadowOrthoScale = 0.5;
+        this.directionalLight.autoUpdateExtends = false;  // 手動で範囲を設定
+        this.directionalLight.shadowOrthoScale = 2.0;     // 影の投影範囲を広げる
+        
+        // オルソグラフィック投影のサイズを明示的に設定
+        this.directionalLight.orthoLeft = -20;
+        this.directionalLight.orthoRight = 20;
+        this.directionalLight.orthoTop = 20;
+        this.directionalLight.orthoBottom = -20;
         
         console.log("Directional light created");
     }
@@ -173,16 +179,57 @@ export class LightingSystem {
      * 影の設定
      */
     setupShadows() {
+        console.log('=== 影の設定開始 ===');
+        
         try {
             const shadowSettings = SHADOW_SETTINGS;
             
-            this.shadowGenerator = new BABYLON.ShadowGenerator(
-                shadowSettings.RESOLUTION, 
-                this.directionalLight
-            );
+            console.log('影の設定値:', shadowSettings);
+            console.log('方向光源:', this.directionalLight ? '存在' : '存在しない');
             
-            // シャドウマップの設定
-            this.shadowGenerator.useBlurExponentialShadowMap = shadowSettings.USE_BLUR;
+            if (!this.directionalLight) {
+                console.error('方向光源が存在しないため、影を生成できません');
+                return;
+            }
+            
+            // より基本的な方法でShadowGeneratorを作成
+            try {
+                this.shadowGenerator = new BABYLON.ShadowGenerator(
+                    shadowSettings.RESOLUTION, 
+                    this.directionalLight
+                );
+                
+                console.log('ShadowGenerator作成成功');
+                
+                // ライトの確認
+                if (this.shadowGenerator.getLight) {
+                    console.log('ShadowGeneratorのライト(getLight):', this.shadowGenerator.getLight());
+                }
+                
+                // シャドウマップの確認
+                const shadowMap = this.shadowGenerator.getShadowMap();
+                if (shadowMap) {
+                    console.log('シャドウマップが正常に作成されました');
+                } else {
+                    console.warn('シャドウマップの作成に失敗しました');
+                }
+                
+            } catch (error) {
+                console.error('ShadowGenerator作成エラー:', error);
+                return;
+            }
+            
+            // シャドウマップの設定（ブラーを使用）
+            if (shadowSettings.USE_BLUR) {
+                this.shadowGenerator.useBlurExponentialShadowMap = true;
+                this.shadowGenerator.useExponentialShadowMap = false;  // ブラーと同時使用不可
+                this.shadowGenerator.blurScale = shadowSettings.BLUR || 2;
+                this.shadowGenerator.blurBoxOffset = 1;
+            } else {
+                this.shadowGenerator.useExponentialShadowMap = true;
+                this.shadowGenerator.useBlurExponentialShadowMap = false;
+            }
+            
             this.shadowGenerator.usePoissonSampling = false;
             
             // PCFフィルタリング
@@ -194,24 +241,39 @@ export class LightingSystem {
             // パラメータ設定
             this.shadowGenerator.bias = shadowSettings.BIAS;
             this.shadowGenerator.normalBias = shadowSettings.NORMAL_BIAS;
-            this.shadowGenerator.darkness = this.settings.shadow.darkness;
+            this.shadowGenerator.darkness = this.settings.shadow.darkness || shadowSettings.DARKNESS;
             this.shadowGenerator.depthScale = shadowSettings.DEPTH_SCALE;
             
-            // その他の設定
+            // その他の設定（ローポリコンテンツ用に最適化）
             this.shadowGenerator.useContactHardeningShadow = false;
-            this.shadowGenerator.useExponentialShadowMap = true;
             this.shadowGenerator.useKernelBlur = false;
-            this.shadowGenerator.enableSoftTransparentShadow = true;
-            this.shadowGenerator.transparencyShadow = true;
-            this.shadowGenerator.forceBackFacesOnly = false;
-            this.shadowGenerator.frustumEdgeFalloff = shadowSettings.FRUSTUM_EDGE_FALLOFF;
+            this.shadowGenerator.enableSoftTransparentShadow = false;
+            this.shadowGenerator.transparencyShadow = false;
+            this.shadowGenerator.forceBackFacesOnly = false;  // 両面で影を生成
+            this.shadowGenerator.frustumEdgeFalloff = shadowSettings.FRUSTUM_EDGE_FALLOFF || 0;
             
-            console.log("Shadow generator setup complete");
+            console.log("Shadow generator設定完了:", {
+                resolution: this.shadowGenerator.mapSize,
+                darkness: this.shadowGenerator.darkness,
+                bias: this.shadowGenerator.bias,
+                normalBias: this.shadowGenerator.normalBias,
+                useBlurExponentialShadowMap: this.shadowGenerator.useBlurExponentialShadowMap,
+                useExponentialShadowMap: this.shadowGenerator.useExponentialShadowMap,
+                forceBackFacesOnly: this.shadowGenerator.forceBackFacesOnly
+            });
+            
+            // シャドウマップの確認
+            const shadowMap = this.shadowGenerator.getShadowMap();
+            console.log('シャドウマップ:', {
+                renderTargetTexture: shadowMap ? '作成済み' : '未作成',
+                size: shadowMap ? shadowMap.getSize() : 'N/A'
+            });
             
             // 新しいメッシュが追加されたときの処理
             this.setupShadowCasterObserver();
             
         } catch (error) {
+            console.error('影の設定エラー:', error);
             this.errorHandler.showWarning("影の設定に失敗しました: " + error.message);
         }
     }
@@ -239,11 +301,15 @@ export class LightingSystem {
                mesh.name.startsWith("juiceBox_") || 
                mesh.name.startsWith("mikeDesk_") ||
                mesh.name.startsWith("burger_") ||
+               mesh.name.startsWith("placed_vehicle_") ||  // 配置済み車両を追加
+               mesh.name.startsWith("vehicle_") ||         // ロード直後の車両を追加
                (mesh.parent && (
                    mesh.parent.name.startsWith("recordMachine_") || 
                    mesh.parent.name.startsWith("juiceBox_") ||
                    mesh.parent.name.startsWith("burger_") ||
-                   mesh.parent.name.startsWith("mikeDesk_")
+                   mesh.parent.name.startsWith("mikeDesk_") ||
+                   mesh.parent.name.startsWith("placed_vehicle_") || // 車両の子メッシュ
+                   mesh.parent.name.startsWith("vehicle_")          // 車両の子メッシュ
                ));
     }
 
@@ -276,6 +342,15 @@ export class LightingSystem {
      * @param {Array<BABYLON.Mesh>} receivers - 影を受け取るメッシュの配列
      */
     setShadowReceivers(receivers) {
+        console.log('=== シャドウレシーバーの設定 ===');
+        
+        // 床メッシュの重複をチェック
+        const floorMeshes = receivers.filter(mesh => 
+            mesh.name.toLowerCase().includes('floor') || 
+            mesh.name.toLowerCase().includes('ground')
+        );
+        console.log(`床メッシュ数: ${floorMeshes.length}`);
+        
         receivers.forEach(mesh => {
             if (!mesh.receiveShadows) {
                 mesh.receiveShadows = true;
@@ -285,9 +360,10 @@ export class LightingSystem {
                     mesh.useShadowDepthMaterial = true;
                 }
             }
+            console.log(`  - ${mesh.name}: receiveShadows=${mesh.receiveShadows}, マテリアル=${mesh.material ? mesh.material.name : 'なし'}, Y位置=${mesh.position.y}`);
         });
         
-        console.log(`Set ${receivers.length} shadow receivers`);
+        console.log(`✅ ${receivers.length}個のシャドウレシーバーを設定完了`);
     }
 
     /**
@@ -498,6 +574,103 @@ export class LightingSystem {
      */
     getShadowGenerator() {
         return this.shadowGenerator;
+    }
+
+    /**
+     * 影の診断情報を出力
+     */
+    diagnoseShadows() {
+        console.log('=== 影の診断開始 ===');
+        
+        // ShadowGeneratorの存在確認
+        if (!this.shadowGenerator) {
+            console.error('❌ ShadowGeneratorが存在しません');
+            console.log('this.shadowGenerator:', this.shadowGenerator);
+            console.log('this.directionalLight:', this.directionalLight);
+            return;
+        }
+        
+        console.log('ShadowGeneratorは存在します');
+        console.log('ShadowGenerator.light:', this.shadowGenerator.light);
+        console.log('ShadowGenerator._light:', this.shadowGenerator._light);
+        
+        // ライトの確認 - 複数の方法で取得を試みる
+        let light = null;
+        
+        // getLight()メソッドを試す
+        if (this.shadowGenerator.getLight && typeof this.shadowGenerator.getLight === 'function') {
+            try {
+                light = this.shadowGenerator.getLight();
+            } catch (e) {
+                console.log('getLight()メソッドの呼び出しに失敗:', e);
+            }
+        }
+        
+        // それでも取得できない場合は、directionalLightを使用
+        if (!light) {
+            light = this.directionalLight;
+        }
+        
+        if (!light) {
+            console.error('❌ ライトが見つかりません');
+            console.log('ShadowGeneratorのプロパティ:', Object.keys(this.shadowGenerator));
+            return;
+        }
+        
+        console.log('ライト情報:', {
+            名前: light.name || 'N/A',
+            タイプ: light.getClassName ? light.getClassName() : 'N/A',
+            有効: light.isEnabled ? light.isEnabled() : 'N/A',
+            強度: light.intensity !== undefined ? light.intensity : 'N/A',
+            位置: light.position || 'N/A',
+            方向: light.direction || 'N/A'
+        });
+        
+        // シャドウマップの確認
+        const shadowMap = this.shadowGenerator.getShadowMap();
+        if (!shadowMap) {
+            console.error('❌ シャドウマップが存在しません');
+            return;
+        }
+        
+        const renderList = shadowMap.renderList || [];
+        console.log('シャドウマップ:', {
+            存在: true,
+            サイズ: shadowMap.getSize ? shadowMap.getSize() : 'N/A',
+            レンダーリスト数: renderList.length
+        });
+        
+        // シャドウキャスターの確認
+        if (renderList.length > 0) {
+            console.log('シャドウキャスター一覧:');
+            renderList.forEach((mesh, index) => {
+                if (mesh) {
+                    console.log(`  [${index}] ${mesh.name || 'Unnamed'} - 有効: ${mesh.isEnabled ? mesh.isEnabled() : 'N/A'}, 可視: ${mesh.isVisible !== undefined ? mesh.isVisible : 'N/A'}`);
+                }
+            });
+        } else {
+            console.warn('⚠️ シャドウキャスターが登録されていません');
+        }
+        
+        // シャドウレシーバーの確認
+        console.log('シャドウレシーバー（床・壁）:');
+        this.scene.meshes.forEach(mesh => {
+            if (mesh.receiveShadows) {
+                console.log(`  - ${mesh.name}: receiveShadows=${mesh.receiveShadows}, マテリアル=${mesh.material ? mesh.material.name : 'なし'}`);
+            }
+        });
+        
+        // シャドウ設定の確認
+        console.log('シャドウ設定:', {
+            darkness: this.shadowGenerator.darkness,
+            bias: this.shadowGenerator.bias,
+            normalBias: this.shadowGenerator.normalBias,
+            useExponentialShadowMap: this.shadowGenerator.useExponentialShadowMap,
+            useBlurExponentialShadowMap: this.shadowGenerator.useBlurExponentialShadowMap,
+            forceBackFacesOnly: this.shadowGenerator.forceBackFacesOnly
+        });
+        
+        console.log('=== 影の診断終了 ===');
     }
 
     /**
