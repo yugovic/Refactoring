@@ -154,8 +154,21 @@ export class InteractionManager {
         
         // 配置済みアセットの子メッシュをチェック
         let targetMesh = pickInfo.pickedMesh;
-        if (targetMesh.metadata && (targetMesh.metadata.isPartOfAsset || targetMesh.metadata.parentAsset)) {
-            console.log("配置済みアセットの子メッシュを検出。床を再ピックします。");
+        
+        // 車両の子メッシュかどうかをチェック（車両は特別な名前パターンを持つ）
+        const isVehiclePart = targetMesh.name.includes("cosmo") || 
+                             targetMesh.name.includes("rx") || 
+                             targetMesh.name.includes("r360") ||
+                             targetMesh.name.includes("_primitive") ||
+                             (targetMesh.parent && targetMesh.parent.name && targetMesh.parent.name.startsWith("placed_vehicle_"));
+        
+        if (targetMesh.metadata && (targetMesh.metadata.isPartOfAsset || targetMesh.metadata.parentAsset || targetMesh.metadata.isPartOfVehicle) || isVehiclePart) {
+            console.log("配置済みアセットまたは車両の子メッシュを検出。床を再ピックします。", {
+                meshName: targetMesh.name,
+                isVehiclePart: isVehiclePart,
+                metadata: targetMesh.metadata,
+                parentName: targetMesh.parent?.name
+            });
             // 配置済みアセットを無視して再度レイキャスト
             const ray = this.scene.createPickingRay(
                 this.scene.pointerX,
@@ -165,10 +178,20 @@ export class InteractionManager {
             );
             
             const predicate = (mesh) => {
-                // 配置済みアセットとその子メッシュを除外
+                // 車両の名前パターンチェック
+                const isVehicleRelated = mesh.name.includes("cosmo") || 
+                                       mesh.name.includes("rx") || 
+                                       mesh.name.includes("r360") ||
+                                       mesh.name.includes("_primitive") ||
+                                       mesh.name.startsWith("placed_vehicle_");
+                
+                // 配置済みアセットとその子メッシュ、車両を除外
                 return !mesh.metadata?.isAsset && 
                        !mesh.metadata?.isPartOfAsset && 
                        !mesh.metadata?.parentAsset &&
+                       !mesh.metadata?.isVehicle &&
+                       !mesh.metadata?.isPartOfVehicle &&
+                       !isVehicleRelated &&
                        mesh.isPickable &&
                        mesh.isVisible;
             };
