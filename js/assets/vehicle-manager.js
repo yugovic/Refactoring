@@ -226,6 +226,7 @@ export class VehicleManager {
     updateVehicleInfo() {
         const vehicleInfo = document.getElementById('vehicleInfo');
         const currentVehicleName = document.getElementById('currentVehicleName');
+        const focusVehicleBtn = document.getElementById('focusVehicleBtn');
         
         if (vehicleInfo && currentVehicleName) {
             if (this.selectedVehicle) {
@@ -234,6 +235,19 @@ export class VehicleManager {
             } else {
                 vehicleInfo.style.display = 'none';
                 currentVehicleName.textContent = '車両が選択されていません';
+            }
+        }
+        
+        // フォーカスボタンの有効/無効を制御
+        if (focusVehicleBtn) {
+            if (this.placedVehicleMesh) {
+                focusVehicleBtn.disabled = false;
+                focusVehicleBtn.style.opacity = '1';
+                focusVehicleBtn.style.cursor = 'pointer';
+            } else {
+                focusVehicleBtn.disabled = true;
+                focusVehicleBtn.style.opacity = '0.5';
+                focusVehicleBtn.style.cursor = 'not-allowed';
             }
         }
     }
@@ -318,6 +332,9 @@ export class VehicleManager {
             this.placedVehicleMesh = clonedMesh;
 
             console.log(`Placed vehicle ${this.selectedVehicle.displayName} at position:`, position);
+            
+            // フォーカスボタンを有効化するためにUI更新
+            this.updateVehicleInfo();
             
             return clonedMesh;
 

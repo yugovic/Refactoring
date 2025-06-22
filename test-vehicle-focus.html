@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>車両フォーカス機能テスト</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-section h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+        }
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        code {
+            background-color: #f4f4f4;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <h1>車両フォーカス機能 実装確認</h1>
+    
+    <div class="test-section">
+        <h2>✅ 実装済み機能</h2>
+        <ul>
+            <li><strong>CameraManager.focusOnMesh()</strong> - カメラフォーカス機能が実装済み</li>
+            <li><strong>UIManager.setupVehicleFocusButton()</strong> - フォーカスボタンのイベントリスナー設定済み</li>
+            <li><strong>VehicleManager.updateVehicleInfo()</strong> - フォーカスボタンの有効/無効制御を追加</li>
+            <li><strong>初期状態での無効化</strong> - setupVehicleFocusButton()で初期無効化を実装</li>
+            <li><strong>車両配置時の有効化</strong> - placeVehicle()後にupdateVehicleInfo()を呼び出し</li>
+            <li><strong>車両削除時の無効化</strong> - deleteSelectedMesh()内でupdateVehicleInfo()を呼び出し</li>
+            <li><strong>元に戻るボタン</strong> - showReturnToCameraButton()とreturnToDefaultCamera()が実装済み</li>
+        </ul>
+    </div>
+    
+    <div class="test-section">
+        <h2>🔍 動作確認手順</h2>
+        <ol>
+            <li>アプリケーションを起動する</li>
+            <li>車両フォーカスボタン（🎯 車両にフォーカス）が<strong>無効状態</strong>で表示されることを確認</li>
+            <li>車両を選択して配置する</li>
+            <li>車両フォーカスボタンが<strong>有効化</strong>されることを確認</li>
+            <li>フォーカスボタンをクリックし、カメラが車両にズームインすることを確認</li>
+            <li>「元のカメラに戻る」ボタンが表示されることを確認</li>
+            <li>「元のカメラに戻る」ボタンをクリックし、カメラが元の位置に戻ることを確認</li>
+            <li>配置済み車両を削除する</li>
+            <li>車両フォーカスボタンが<strong>無効化</strong>されることを確認</li>
+        </ol>
+    </div>
+    
+    <div class="test-section">
+        <h2>📋 実装内容の詳細</h2>
+        
+        <h3>1. VehicleManager.updateVehicleInfo()</h3>
+        <div class="status info">
+            <p>フォーカスボタンの有効/無効を制御する処理を追加:</p>
+            <pre><code>if (focusVehicleBtn) {
+    if (this.placedVehicleMesh) {
+        focusVehicleBtn.disabled = false;
+        focusVehicleBtn.style.opacity = '1';
+        focusVehicleBtn.style.cursor = 'pointer';
+    } else {
+        focusVehicleBtn.disabled = true;
+        focusVehicleBtn.style.opacity = '0.5';
+        focusVehicleBtn.style.cursor = 'not-allowed';
+    }
+}</code></pre>
+        </div>
+        
+        <h3>2. UIManager.setupVehicleFocusButton()</h3>
+        <div class="status info">
+            <p>初期状態でボタンを無効化:</p>
+            <pre><code>// 初期状態で無効化
+focusBtn.disabled = true;
+focusBtn.style.opacity = '0.5';
+focusBtn.style.cursor = 'not-allowed';</code></pre>
+        </div>
+        
+        <h3>3. CameraManager.focusOnMesh()</h3>
+        <div class="status info">
+            <p>オルソグラフィックモードからパースペクティブモードへの切り替えを含む実装済み</p>
+            <p>GSAPアニメーションでスムーズなカメラ移動を実現</p>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>⚠️ 注意事項</h2>
+        <ul>
+            <li>車両のスケールが10%のため、バウンディングスフィアが小さい可能性があります</li>
+            <li>focusOnMeshメソッドの<code>radiusMultiplier</code>と<code>minRadius</code>パラメータで距離を調整しています</li>
+            <li>オルソグラフィックカメラモードからパースペクティブカメラモードへの切り替えが行われます</li>
+        </ul>
+    </div>
+    
+    <div class="test-section">
+        <h2>🐛 既知の問題と対策</h2>
+        <div class="status success">
+            <strong>問題:</strong> フォーカスボタンが常に有効状態だった<br>
+            <strong>対策:</strong> 初期無効化と車両配置/削除時の状態更新を実装
+        </div>
+        <div class="status success">
+            <strong>問題:</strong> 車両削除時にボタンが有効のままだった<br>
+            <strong>対策:</strong> SelectionController.deleteSelectedMesh()でupdateVehicleInfo()を呼び出し
+        </div>
+    </div>
+</body>
+</html>

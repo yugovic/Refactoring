@@ -339,6 +339,8 @@ export class SelectionController {
             const vehicleManager = this.app.getManager('vehicle');
             if (vehicleManager.getPlacedVehicle() === meshToDelete) {
                 vehicleManager.placedVehicleMesh = null;
+                // フォーカスボタンを無効化するためにUI更新
+                vehicleManager.updateVehicleInfo();
             }
         }
         

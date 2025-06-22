@@ -137,8 +137,9 @@ export class CameraManager {
 
     /**
      * カメラの投影範囲を更新
+     * @param {number} customOrthoSize - カスタムオルソサイズ（オプション）
      */
-    updateCameraProjection() {
+    updateCameraProjection(customOrthoSize = null) {
         if (!this.isometricCamera || !this.scene.getEngine()) return;
         
         const engine = this.scene.getEngine();
@@ -148,16 +149,20 @@ export class CameraManager {
         
         // デバイスの種類に応じてサイズを調整
         let orthoSize;
-        if (canvasWidth <= 768) {
-            orthoSize = 15; // モバイル
-        } else if (canvasWidth <= 1024) {
-            orthoSize = 18; // タブレット
+        if (customOrthoSize !== null) {
+            orthoSize = customOrthoSize;
         } else {
-            orthoSize = 20; // デスクトップ
+            if (canvasWidth <= 768) {
+                orthoSize = 15; // モバイル
+            } else if (canvasWidth <= 1024) {
+                orthoSize = 18; // タブレット
+            } else {
+                orthoSize = 20; // デスクトップ
+            }
+            
+            // ズームレベルを適用
+            orthoSize = orthoSize / this.zoomLevel;
         }
-        
-        // ズームレベルを適用
-        orthoSize = orthoSize / this.zoomLevel;
         
         // 投影パラメータを設定
         if (aspectRatio > 1.5) {
@@ -393,42 +398,85 @@ export class CameraManager {
             return;
         }
         
-        // GSAPでアニメーション
-        const cameraState = {
-            radius: this.isometricCamera.radius,
-            alpha: this.isometricCamera.alpha,
-            beta: this.isometricCamera.beta,
-            targetX: this.isometricCamera.target.x,
-            targetY: this.isometricCamera.target.y,
-            targetZ: this.isometricCamera.target.z
-        };
-        
-        gsap.to(cameraState, {
-            duration: 1.5,
-            radius: this.preFocusState.radius,
-            alpha: this.preFocusState.alpha,
-            beta: this.preFocusState.beta,
-            targetX: this.preFocusState.target.x,
-            targetY: this.preFocusState.target.y,
-            targetZ: this.preFocusState.target.z,
-            ease: "power2.inOut",
-            onUpdate: () => {
-                this.isometricCamera.radius = cameraState.radius;
-                this.isometricCamera.alpha = cameraState.alpha;
-                this.isometricCamera.beta = cameraState.beta;
-                this.isometricCamera.target.x = cameraState.targetX;
-                this.isometricCamera.target.y = cameraState.targetY;
-                this.isometricCamera.target.z = cameraState.targetZ;
-            },
-            onComplete: () => {
-                // 元のカメラモードに戻す
-                this.isometricCamera.mode = this.preFocusState.mode;
-                if (this.preFocusState.mode === BABYLON.Camera.ORTHOGRAPHIC_CAMERA) {
+        // オルソグラフィックモードからの復帰
+        if (this.preFocusState.mode === BABYLON.Camera.ORTHOGRAPHIC_CAMERA && 
+            this.isometricCamera.mode === BABYLON.Camera.ORTHOGRAPHIC_CAMERA) {
+            // オルソグラフィックモードでのアニメーション
+            const currentOrthoSize = Math.abs(this.isometricCamera.orthoTop);
+            const targetOrthoSize = Math.abs(this.preFocusState.orthoTop);
+            
+            const orthoState = {
+                orthoSize: currentOrthoSize,
+                alpha: this.isometricCamera.alpha,
+                beta: this.isometricCamera.beta,
+                targetX: this.isometricCamera.target.x,
+                targetY: this.isometricCamera.target.y,
+                targetZ: this.isometricCamera.target.z
+            };
+            
+            gsap.to(orthoState, {
+                duration: 1.5,
+                orthoSize: targetOrthoSize,
+                alpha: this.preFocusState.alpha,
+                beta: this.preFocusState.beta,
+                targetX: this.preFocusState.target.x,
+                targetY: this.preFocusState.target.y,
+                targetZ: this.preFocusState.target.z,
+                ease: "power2.inOut",
+                onUpdate: () => {
+                    this.updateCameraProjection(orthoState.orthoSize);
+                    this.isometricCamera.alpha = orthoState.alpha;
+                    this.isometricCamera.beta = orthoState.beta;
+                    this.isometricCamera.target.x = orthoState.targetX;
+                    this.isometricCamera.target.y = orthoState.targetY;
+                    this.isometricCamera.target.z = orthoState.targetZ;
+                },
+                onComplete: () => {
+                    // ズームレベルを復元
+                    this.zoomLevel = this.preFocusState.zoomLevel || 1;
                     this.updateCameraProjection();
+                    console.log("Returned to pre-focus state (ORTHOGRAPHIC)");
                 }
-                console.log("Returned to pre-focus state");
-            }
-        });
+            });
+        } else {
+            // 透視投影モードでの復元または異なるモード間の切り替え
+            const cameraState = {
+                radius: this.isometricCamera.radius,
+                alpha: this.isometricCamera.alpha,
+                beta: this.isometricCamera.beta,
+                targetX: this.isometricCamera.target.x,
+                targetY: this.isometricCamera.target.y,
+                targetZ: this.isometricCamera.target.z
+            };
+            
+            gsap.to(cameraState, {
+                duration: 1.5,
+                radius: this.preFocusState.radius,
+                alpha: this.preFocusState.alpha,
+                beta: this.preFocusState.beta,
+                targetX: this.preFocusState.target.x,
+                targetY: this.preFocusState.target.y,
+                targetZ: this.preFocusState.target.z,
+                ease: "power2.inOut",
+                onUpdate: () => {
+                    this.isometricCamera.radius = cameraState.radius;
+                    this.isometricCamera.alpha = cameraState.alpha;
+                    this.isometricCamera.beta = cameraState.beta;
+                    this.isometricCamera.target.x = cameraState.targetX;
+                    this.isometricCamera.target.y = cameraState.targetY;
+                    this.isometricCamera.target.z = cameraState.targetZ;
+                },
+                onComplete: () => {
+                    // 元のカメラモードに戻す
+                    this.isometricCamera.mode = this.preFocusState.mode;
+                    if (this.preFocusState.mode === BABYLON.Camera.ORTHOGRAPHIC_CAMERA) {
+                        this.zoomLevel = this.preFocusState.zoomLevel || 1;
+                        this.updateCameraProjection();
+                    }
+                    console.log("Returned to pre-focus state");
+                }
+            });
+        }
     }
 
     /**
@@ -448,6 +496,7 @@ export class CameraManager {
             radiusMultiplier: 2.5,  // メッシュのサイズに対する距離の倍率
             ease: "power2.inOut",
             minRadius: 5,        // 最小距離（これ以上近づかない）
+            keepOrthographic: true,  // オルソグラフィックモードを維持するか
             onComplete: null
         };
         
@@ -495,7 +544,8 @@ export class CameraManager {
             orthoLeft: this.isometricCamera.orthoLeft,
             orthoRight: this.isometricCamera.orthoRight,
             orthoTop: this.isometricCamera.orthoTop,
-            orthoBottom: this.isometricCamera.orthoBottom
+            orthoBottom: this.isometricCamera.orthoBottom,
+            zoomLevel: this.zoomLevel
         };
         
         console.log("Camera state before focus:", {
@@ -525,47 +575,115 @@ export class CameraManager {
             fromRadius: cameraState.radius,
             toRadius: targetRadius,
             radiusChange: cameraState.radius - targetRadius,
-            cameraMode: "Switched to PERSPECTIVE"
+            cameraMode: settings.keepOrthographic && this.isometricCamera.mode === BABYLON.Camera.ORTHOGRAPHIC_CAMERA ? "ORTHOGRAPHIC" : "PERSPECTIVE"
         });
         
-        // フォーカス時は透視投影に切り替える（ズーム効果のため）
-        this.isometricCamera.mode = BABYLON.Camera.PERSPECTIVE_CAMERA;
-        
-        // デバッグ用：開始距離を調整可能にする
-        const startRadius = settings.startRadius || 20; // デフォルト20、オプションで調整可能
-        console.log("Using start radius:", startRadius);
-        
-        // カメラの開始距離を設定
-        cameraState.radius = startRadius;
-        this.isometricCamera.radius = startRadius;
-        
-        gsap.to(cameraState, {
-            duration: settings.duration,
-            radius: targetRadius,
-            alpha: targetAlpha,
-            beta: targetBeta,
-            targetX: center.x,
-            targetY: center.y,
-            targetZ: center.z,
-            ease: settings.ease,
-            onUpdate: () => {
-                this.isometricCamera.radius = cameraState.radius;
-                this.isometricCamera.alpha = cameraState.alpha;
-                this.isometricCamera.beta = cameraState.beta;
-                this.isometricCamera.target.x = cameraState.targetX;
-                this.isometricCamera.target.y = cameraState.targetY;
-                this.isometricCamera.target.z = cameraState.targetZ;
-            },
-            onComplete: () => {
-                console.log("Camera focus animation completed", {
-                    finalRadius: this.isometricCamera.radius,
-                    finalTarget: this.isometricCamera.target
-                });
-                if (settings.onComplete) {
-                    settings.onComplete();
+        // オルソグラフィックモードでのフォーカス
+        if (settings.keepOrthographic && this.isometricCamera.mode === BABYLON.Camera.ORTHOGRAPHIC_CAMERA) {
+            // オルソグラフィックモードを維持
+            console.log("Focusing in ORTHOGRAPHIC mode");
+            
+            // 現在のオルソサイズから計算
+            const currentOrthoSize = Math.abs(this.isometricCamera.orthoTop);
+            // ズームインのため、現在のオルソサイズより小さい値を目標にする
+            const targetOrthoSize = Math.max(radius * 0.8, 3); // 車両サイズに基づいた値（最小3）
+            const minOrthoSize = 3; // 最小オルソサイズ（これ以上近づかない）
+            const maxOrthoSize = currentOrthoSize * 0.75; // 現在の75%までズームイン（少し控えめに）
+            const finalOrthoSize = Math.min(maxOrthoSize, Math.max(minOrthoSize, targetOrthoSize));
+            
+            console.log("Orthographic zoom calculation:", {
+                currentOrthoSize,
+                vehicleRadius: radius,
+                targetOrthoSize,
+                minOrthoSize,
+                maxOrthoSize,
+                finalOrthoSize,
+                willZoomIn: finalOrthoSize < currentOrthoSize,
+                zoomRatio: finalOrthoSize / currentOrthoSize
+            });
+            
+            // GSAPでアニメーション
+            const orthoState = {
+                orthoSize: currentOrthoSize,
+                alpha: this.isometricCamera.alpha,
+                beta: this.isometricCamera.beta,
+                targetX: this.isometricCamera.target.x,
+                targetY: this.isometricCamera.target.y,
+                targetZ: this.isometricCamera.target.z
+            };
+            
+            gsap.to(orthoState, {
+                duration: settings.duration,
+                orthoSize: finalOrthoSize,
+                alpha: targetAlpha,
+                beta: targetBeta,
+                targetX: center.x,
+                targetY: center.y,
+                targetZ: center.z,
+                ease: settings.ease,
+                onUpdate: () => {
+                    // オルソグラフィック投影範囲を更新
+                    this.updateCameraProjection(orthoState.orthoSize);
+                    this.isometricCamera.alpha = orthoState.alpha;
+                    this.isometricCamera.beta = orthoState.beta;
+                    this.isometricCamera.target.x = orthoState.targetX;
+                    this.isometricCamera.target.y = orthoState.targetY;
+                    this.isometricCamera.target.z = orthoState.targetZ;
+                },
+                onComplete: () => {
+                    console.log("Camera focus animation completed (ORTHOGRAPHIC)", {
+                        finalOrthoSize: orthoState.orthoSize,
+                        finalTarget: this.isometricCamera.target
+                    });
+                    if (settings.onComplete) {
+                        settings.onComplete();
+                    }
                 }
-            }
-        });
+            });
+            
+        } else {
+            // 透視投影モードでのフォーカス（従来の動作）
+            console.log("Focusing in PERSPECTIVE mode");
+            
+            // フォーカス時は透視投影に切り替える（ズーム効果のため）
+            this.isometricCamera.mode = BABYLON.Camera.PERSPECTIVE_CAMERA;
+            
+            // デバッグ用：開始距離を調整可能にする
+            const startRadius = settings.startRadius || 20; // デフォルト20、オプションで調整可能
+            console.log("Using start radius:", startRadius);
+            
+            // カメラの開始距離を設定
+            cameraState.radius = startRadius;
+            this.isometricCamera.radius = startRadius;
+            
+            gsap.to(cameraState, {
+                duration: settings.duration,
+                radius: targetRadius,
+                alpha: targetAlpha,
+                beta: targetBeta,
+                targetX: center.x,
+                targetY: center.y,
+                targetZ: center.z,
+                ease: settings.ease,
+                onUpdate: () => {
+                    this.isometricCamera.radius = cameraState.radius;
+                    this.isometricCamera.alpha = cameraState.alpha;
+                    this.isometricCamera.beta = cameraState.beta;
+                    this.isometricCamera.target.x = cameraState.targetX;
+                    this.isometricCamera.target.y = cameraState.targetY;
+                    this.isometricCamera.target.z = cameraState.targetZ;
+                },
+                onComplete: () => {
+                    console.log("Camera focus animation completed", {
+                        finalRadius: this.isometricCamera.radius,
+                        finalTarget: this.isometricCamera.target
+                    });
+                    if (settings.onComplete) {
+                        settings.onComplete();
+                    }
+                }
+            });
+        }
     }
 
     /**

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>オルソグラフィックカメラズーム修正確認</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            line-height: 1.6;
+            background-color: #f5f5f5;
+        }
+        .fix-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .fix-section h2 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        .code-block {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+        }
+        .status {
+            padding: 10px 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .status.fixed {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.issue {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        ul li {
+            margin-bottom: 8px;
+        }
+        .highlight {
+            background-color: #fff3cd;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 オルソグラフィックカメラズーム修正</h1>
+    
+    <div class="fix-section">
+        <h2>問題の概要</h2>
+        <div class="status issue">
+            ユーザー報告: 「フォーカスボタンを押すとカメラがどんどん引いていってしまいます」
+        </div>
+        <p>車両フォーカスボタンをクリックした際、期待される動作は車両に向かってズームインすることですが、実際にはカメラが遠ざかっていく（ズームアウトする）問題が発生していました。</p>
+    </div>
+
+    <div class="fix-section">
+        <h2>原因分析</h2>
+        <ul>
+            <li><strong>オルソグラフィックカメラの仕組み</strong>: orthoSizeが小さいほどズームイン、大きいほどズームアウト</li>
+            <li><strong>問題のコード</strong>: 目標のorthoSizeが現在値より大きくなってしまっていた</li>
+            <li><strong>10%スケールの影響</strong>: 車両が10%スケールのため、radiusが小さく、計算に影響していた</li>
+        </ul>
+    </div>
+
+    <div class="fix-section">
+        <h2>実装した修正</h2>
+        
+        <h3>1. CameraManager.focusOnMesh() のオルソグラフィックズーム計算を修正</h3>
+        <div class="code-block">
+// 修正前:
+const targetOrthoSize = radius * 0.3; // 小さすぎる値になる可能性
+const minOrthoSize = 1.5;
+const maxOrthoSize = 5;
+const finalOrthoSize = Math.max(minOrthoSize, Math.min(targetOrthoSize, maxOrthoSize));
+
+// 修正後:
+const currentOrthoSize = Math.abs(this.isometricCamera.orthoTop);
+const targetOrthoSize = Math.max(radius * 0.5, 2); // 最小2を保証
+const minOrthoSize = 2; // 最小オルソサイズ（これ以上近づかない）
+const maxOrthoSize = currentOrthoSize * 0.7; // 現在の70%までズームイン
+const finalOrthoSize = Math.min(maxOrthoSize, Math.max(minOrthoSize, targetOrthoSize));
+        </div>
+        
+        <div class="status fixed">
+            ✅ 修正ポイント: 現在のorthoSizeの70%を上限として、確実にズームインするように調整
+        </div>
+
+        <h3>2. デバッグログの強化</h3>
+        <div class="code-block">
+console.log("Orthographic zoom calculation:", {
+    currentOrthoSize,
+    vehicleRadius: radius,
+    targetOrthoSize,
+    minOrthoSize,
+    maxOrthoSize,
+    finalOrthoSize,
+    willZoomIn: finalOrthoSize < currentOrthoSize,
+    zoomRatio: finalOrthoSize / currentOrthoSize
+});
+        </div>
+
+        <h3>3. UIManagerで明示的にオルソグラフィックモードを指定</h3>
+        <div class="code-block">
+cameraManager.focusOnMesh(placedVehicle, {
+    duration: 1.8,
+    radiusMultiplier: 15,
+    minRadius: 5,
+    keepOrthographic: true,  // 明示的に指定
+    ease: "power2.inOut",
+    onComplete: () => {
+        console.log('Vehicle focus completed');
+        this.showReturnToCameraButton();
+    }
+});
+        </div>
+    </div>
+
+    <div class="fix-section">
+        <h2>動作確認手順</h2>
+        <ol>
+            <li>アプリケーションを起動</li>
+            <li>車両を選択して配置</li>
+            <li>「🎯 車両にフォーカス」ボタンをクリック</li>
+            <li>カメラが車両に向かって<span class="highlight">ズームイン</span>することを確認</li>
+            <li>コンソールで <code>willZoomIn: true</code> と <code>zoomRatio < 1</code> を確認</li>
+            <li>「元のカメラに戻る」ボタンで元の視点に戻ることを確認</li>
+        </ol>
+    </div>
+
+    <div class="fix-section">
+        <h2>期待される動作</h2>
+        <div class="status info">
+            <ul style="list-style: none; padding: 0; margin: 0;">
+                <li>✓ フォーカスボタンクリック時、カメラが車両に接近</li>
+                <li>✓ オルソグラフィックモードを維持したままズーム</li>
+                <li>✓ スムーズなアニメーション（1.8秒）</li>
+                <li>✓ 最小距離制限により、近づきすぎを防止</li>
+                <li>✓ 元の視点への復帰機能</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="fix-section">
+        <h2>技術的な詳細</h2>
+        <p><strong>オルソグラフィック投影でのズーム計算:</strong></p>
+        <ul>
+            <li>orthoTop/orthoBottom の絶対値がカメラの表示範囲を決定</li>
+            <li>値が小さい = ズームイン（近い）</li>
+            <li>値が大きい = ズームアウト（遠い）</li>
+            <li>アスペクト比を考慮してorthoLeft/orthoRightも同時に調整</li>
+        </ul>
+    </div>
+</body>
+</html>

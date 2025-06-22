@@ -17,6 +17,7 @@ export class UIManager {
         // UI状態
         this.controlsPanelVisible = true;
         this.helpPanelVisible = false;
+        this.isVehicleFocused = false;  // 車両フォーカス状態フラグ
         
         // 位置インジケーター
         this.positionIndicator = null;
@@ -1169,6 +1170,11 @@ const cameraSettings = {
     setupVehicleFocusButton() {
         const focusBtn = document.getElementById('focusVehicleBtn');
         if (focusBtn) {
+            // 初期状態で無効化
+            focusBtn.disabled = true;
+            focusBtn.style.opacity = '0.5';
+            focusBtn.style.cursor = 'not-allowed';
+            
             focusBtn.addEventListener('click', () => {
                 this.focusOnVehicle();
             });
@@ -1193,15 +1199,23 @@ const cameraSettings = {
             return;
         }
         
-        // カメラをフォーカス（固定距離でズームイン）
+        // 既にフォーカス状態の場合は元に戻る
+        if (this.isVehicleFocused) {
+            this.returnToDefaultCamera();
+            return;
+        }
+        
+        // カメラをフォーカス（オルソグラフィックモードでズームイン）
         cameraManager.focusOnMesh(placedVehicle, {
             duration: 1.8,
             radiusMultiplier: 15,  // 大きめの倍率にして、minRadiusで制限
             minRadius: 5,          // 固定距離5まで近づく（かなり近い）
-            startRadius: this.focusStartRadius || 20,  // UIで設定された値を使用
+            keepOrthographic: true,  // オルソグラフィックモードを維持
             ease: "power2.inOut",
             onComplete: () => {
                 console.log('Vehicle focus completed');
+                // フォーカス状態フラグを設定
+                this.isVehicleFocused = true;
                 // 元に戻るボタンを表示
                 this.showReturnToCameraButton();
             }
@@ -1410,6 +1424,9 @@ const cameraSettings = {
         if (cameraManager) {
             // フォーカス前の状態に戻る（アニメーション付き）
             cameraManager.returnToPreFocusState();
+            
+            // フォーカス状態フラグをリセット
+            this.isVehicleFocused = false;
             
             // ボタンを非表示
             this.hideReturnToCameraButton();
