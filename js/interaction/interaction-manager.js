@@ -581,6 +581,11 @@ export class InteractionManager {
      * プレビューを更新
      */
     async updatePreview() {
+        // プレビュー作成中フラグ
+        if (this._isCreatingPreview) {
+            return;
+        }
+        
         const pickInfo = this.scene.pick(
             this.scene.pointerX,
             this.scene.pointerY,
@@ -680,7 +685,17 @@ export class InteractionManager {
         }
         
         if (this.previewMesh) {
-            this.previewMesh.position = position;
+            // まず基準位置に配置
+            this.previewMesh.position = position.clone();
+            
+            // アセットタイプのプレビューで床配置の場合、バウンディングボックスに基づいた高さ調整を行う
+            const assetTypes = ['facility', ASSET_TYPES.CUBE, ASSET_TYPES.RECORD_MACHINE, 
+                              ASSET_TYPES.JUICE_BOX, ASSET_TYPES.TROPHY, 'uploaded_asset'];
+            
+            if (assetTypes.includes(this.currentMode) && !wallNormal) {
+                // AssetPlacerと同じロジックで高さを調整
+                this.adjustPreviewHeight(this.previewMesh, position);
+            }
             
             // 車両の高さ調整が必要な場合
             if (this.previewMesh.metadata && this.previewMesh.metadata.needsHeightAdjustment) {
@@ -745,9 +760,24 @@ export class InteractionManager {
      * プレビューメッシュを作成
      */
     async createPreviewMesh() {
-        this.cleanupPreview();
+        // 既存のプレビューメッシュがある場合は作成しない
+        if (this.previewMesh) {
+            console.log(`既存のプレビューメッシュが存在するためスキップ: ${this.previewMesh.name}`);
+            return;
+        }
         
-        let mesh = null;
+        // プレビュー作成中フラグを設定
+        if (this._isCreatingPreview) {
+            console.log(`プレビュー作成中のためスキップ`);
+            return;
+        }
+        
+        this._isCreatingPreview = true;
+        
+        try {
+            this.cleanupPreview();
+            
+            let mesh = null;
         
         switch (this.currentMode) {
             case ASSET_TYPES.CUBE:
@@ -813,6 +843,38 @@ export class InteractionManager {
                 }
                 break;
                 
+            case 'facility':
+                // ファシリティアセットのプレビュー
+                if (this.currentFacilityFile) {
+                    try {
+                        console.log(`ファシリティプレビュー作成開始: ${this.currentFacilityFile}`);
+                        
+                        // AssetLoaderでファシリティアセットをロード
+                        const assetLoader = this.app.getManager('assetLoader');
+                        mesh = await assetLoader.loadFacilityAsset(
+                            `assets/Facilities/${this.currentFacilityFile}`,
+                            `preview_facility_${this.currentFacilityFile}_${Date.now()}`
+                        );
+                        
+                        if (mesh) {
+                            console.log(`ファシリティプレビューメッシュ作成成功: ${mesh.name}`);
+                            mesh.setEnabled(true);
+                            this.makeTransparent(mesh);
+                        } else {
+                            console.warn(`ファシリティプレビューメッシュがnullです`);
+                            // ロード失敗時はシンプルなプレビュー
+                            mesh = this.createSimplePreview(new BABYLON.Color3(0.6, 0.6, 0.7));
+                        }
+                    } catch (error) {
+                        console.error(`ファシリティアセットプレビューの作成に失敗:`, error);
+                        // エラー時はシンプルなプレビュー
+                        mesh = this.createSimplePreview(new BABYLON.Color3(0.6, 0.6, 0.7));
+                    }
+                } else {
+                    console.warn(`currentFacilityFileが設定されていません`);
+                }
+                break;
+                
             case 'uploaded_asset':
                 // アップロードアセットのプレビュー
                 const activeAssetId = this.uploadManager.getActiveAssetId();
@@ -874,17 +936,21 @@ export class InteractionManager {
                 break;
         }
         
-        if (mesh) {
-            mesh.isPickable = false;
-            mesh.checkCollisions = false;
-            
-            if (mesh.getChildMeshes) {
-                mesh.getChildMeshes().forEach(child => {
-                    child.isPickable = false;
-                });
+            if (mesh) {
+                mesh.isPickable = false;
+                mesh.checkCollisions = false;
+                
+                if (mesh.getChildMeshes) {
+                    mesh.getChildMeshes().forEach(child => {
+                        child.isPickable = false;
+                    });
+                }
+                
+                this.previewMesh = mesh;
             }
-            
-            this.previewMesh = mesh;
+        } finally {
+            // フラグをリセット
+            this._isCreatingPreview = false;
         }
     }
 
@@ -921,6 +987,69 @@ export class InteractionManager {
     }
 
     /**
+     * プレビューメッシュの高さを調整（AssetPlacerと同じロジック）
+     * @param {BABYLON.Mesh} mesh - プレビューメッシュ
+     * @param {BABYLON.Vector3} position - 基準位置
+     */
+    adjustPreviewHeight(mesh, position) {
+        try {
+            // メッシュが有効化されていることを確認
+            mesh.setEnabled(true);
+            
+            // 子メッシュも有効化
+            const childMeshes = mesh.getChildMeshes ? mesh.getChildMeshes() : [];
+            childMeshes.forEach(child => {
+                child.setEnabled(true);
+            });
+            
+            // 全体のワールドマトリックスを更新
+            mesh.computeWorldMatrix(true);
+            
+            // 子メッシュのワールドマトリックスも更新
+            childMeshes.forEach(child => {
+                child.computeWorldMatrix(true);
+                child.refreshBoundingInfo();
+            });
+            
+            // メインメッシュのバウンディング情報を更新
+            mesh.refreshBoundingInfo();
+            
+            // バウンディングボックスを取得
+            const boundingInfo = mesh.getBoundingInfo();
+            
+            if (!boundingInfo || !boundingInfo.boundingBox) {
+                console.warn(`⚠️ プレビューバウンディングボックスが取得できません: ${mesh.name}`);
+                return;
+            }
+            
+            // バウンディングボックスの最下点を取得
+            const boundingBox = boundingInfo.boundingBox;
+            const minY = boundingBox.minimumWorld.y;
+            const maxY = boundingBox.maximumWorld.y;
+            const height = maxY - minY;
+            
+            console.log(`📦 プレビューバウンディング情報 [${this.currentMode}]:`, {
+                minY: minY.toFixed(3),
+                maxY: maxY.toFixed(3),
+                height: height.toFixed(3),
+                meshY: mesh.position.y.toFixed(3),
+                targetFloorY: position.y.toFixed(3)
+            });
+            
+            // 床面からの正しい位置を計算
+            const offsetFromMeshToBottom = mesh.position.y - minY;
+            const newY = position.y + offsetFromMeshToBottom + 0.001; // 1mm浮かす
+            
+            mesh.position.y = newY;
+            
+            console.log(`✅ プレビュー位置調整完了 [${this.currentMode}]: Y=${newY.toFixed(3)} (offset: ${offsetFromMeshToBottom.toFixed(3)})`);
+            
+        } catch (error) {
+            console.error(`❌ プレビュー高さ調整エラー:`, error);
+        }
+    }
+
+    /**
      * プレビューを非表示
      */
     hidePreview() {
@@ -934,17 +1063,37 @@ export class InteractionManager {
      * プレビューをクリーンアップ
      */
     cleanupPreview() {
+        // 既存のプレビューメッシュを削除
         if (this.previewMesh) {
-            this.previewMesh.dispose();
+            console.log(`プレビューメッシュをクリーンアップ: ${this.previewMesh.name}`);
+            
+            // 子メッシュも含めて削除
+            if (this.previewMesh.getChildMeshes) {
+                const childMeshes = this.previewMesh.getChildMeshes();
+                childMeshes.forEach(child => {
+                    if (child && !child.isDisposed()) {
+                        child.dispose();
+                    }
+                });
+            }
+            
+            if (!this.previewMesh.isDisposed()) {
+                this.previewMesh.dispose();
+            }
             this.previewMesh = null;
         }
         
-        // 残っているプレビューメッシュも削除
+        // 残っているプレビューメッシュも削除（念のため）
         const previewMeshes = this.scene.meshes.filter(mesh => 
-            mesh.name.startsWith("preview")
+            mesh && mesh.name && mesh.name.startsWith("preview_") && !mesh.doNotDispose
         );
         
-        previewMeshes.forEach(mesh => mesh.dispose());
+        previewMeshes.forEach(mesh => {
+            if (!mesh.isDisposed()) {
+                console.log(`残存プレビューメッシュを削除: ${mesh.name}`);
+                mesh.dispose();
+            }
+        });
     }
 
     /**
@@ -1111,6 +1260,10 @@ export class InteractionManager {
     setFacilityPlacementMode(assetFile) {
         console.log(`=== ファシリティ配置モード設定: ${assetFile} ===`);
         this.exitPlacementMode();
+        
+        // 明示的にプレビューをクリーンアップ
+        this.cleanupPreview();
+        
         this.isPlacing = true;
         this.currentMode = 'facility';
         this.currentFacilityFile = assetFile;

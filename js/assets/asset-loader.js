@@ -28,6 +28,9 @@ export class AssetLoader {
         
         // ロード完了コールバック
         this.onLoadCallbacks = [];
+        
+        // ファシリティアセットのキャッシュ
+        this.facilityAssetCache = new Map();
     }
 
     /**
@@ -482,6 +485,160 @@ export class AssetLoader {
     }
 
     /**
+     * ファシリティアセットをロード
+     * @param {string} filePath - ファイルパス
+     * @param {string} name - メッシュ名
+     * @returns {Promise<BABYLON.Mesh>}
+     */
+    async loadFacilityAsset(filePath, name) {
+        // キャッシュをチェック
+        if (this.facilityAssetCache.has(filePath)) {
+            console.log(`Using cached facility asset: ${filePath}`);
+            const cachedMesh = this.facilityAssetCache.get(filePath);
+            
+            // キャッシュされたメッシュの状態を確認
+            console.log(`Cached mesh status:`, {
+                exists: !!cachedMesh,
+                isDisposed: cachedMesh ? cachedMesh.isDisposed() : 'N/A',
+                inScene: cachedMesh ? !!cachedMesh._scene : 'N/A',
+                name: cachedMesh ? cachedMesh.name : 'N/A',
+                childCount: cachedMesh && cachedMesh.getChildMeshes ? cachedMesh.getChildMeshes().length : 'N/A'
+            });
+            
+            // キャッシュされたメッシュが無効な場合は、キャッシュから削除して再ロード
+            if (!cachedMesh || cachedMesh.isDisposed() || !cachedMesh._scene) {
+                console.warn(`Cached mesh is invalid, removing from cache and reloading`);
+                this.facilityAssetCache.delete(filePath);
+                // 再帰的に再ロード
+                return this.loadFacilityAsset(filePath, name);
+            }
+            
+            // キャッシュされたメッシュをクローンして返す
+            return this.cloneFacilityAsset(cachedMesh, name);
+        }
+        
+        return new Promise((resolve, reject) => {
+            console.log(`Loading facility asset: ${filePath}`);
+            
+            BABYLON.SceneLoader.ImportMesh(
+                "", 
+                filePath, 
+                "", 
+                this.scene,
+                (meshes) => {
+                    console.log(`Facility asset loaded: ${meshes.length} meshes`);
+                    
+                    if (meshes.length > 0) {
+                        const rootMesh = meshes[0];
+                        rootMesh.name = name;
+                        
+                        // スケールを設定
+                        rootMesh.scaling = new BABYLON.Vector3(0.1, 0.1, 0.1);
+                        
+                        // メッシュプロパティを設定
+                        this.setupMeshProperties(rootMesh);
+                        
+                        // バウンディングを再計算
+                        this.recalculateParentBounding(rootMesh);
+                        
+                        // バウンディング情報をログ出力
+                        this.logAssetBoundingInfo(rootMesh, 'facility');
+                        
+                        // オリジナルメッシュをキャッシュ用に準備
+                        rootMesh.setEnabled(false);
+                        
+                        // オリジナルメッシュを保護（破棄されないように）
+                        rootMesh.doNotDispose = true;
+                        
+                        // 子メッシュも保護
+                        const childMeshes = rootMesh.getChildMeshes();
+                        childMeshes.forEach(child => {
+                            child.doNotDispose = true;
+                        });
+                        
+                        // キャッシュに保存
+                        this.facilityAssetCache.set(filePath, rootMesh);
+                        
+                        // クローンを作成して返す
+                        const clonedMesh = this.cloneFacilityAsset(rootMesh, name);
+                        resolve(clonedMesh);
+                    } else {
+                        reject(new Error("No meshes loaded"));
+                    }
+                },
+                null,
+                (_, message) => {
+                    reject(new Error("Failed to load facility asset: " + message));
+                }
+            );
+        });
+    }
+
+    /**
+     * ファシリティアセットをクローン
+     * @param {BABYLON.Mesh} originalMesh - オリジナルメッシュ
+     * @param {string} name - 新しい名前
+     * @returns {BABYLON.Mesh|null}
+     */
+    cloneFacilityAsset(originalMesh, name) {
+        try {
+            // オリジナルメッシュが存在し、破棄されていないことを確認
+            if (!originalMesh) {
+                console.error('Original facility mesh is null');
+                return null;
+            }
+            
+            if (originalMesh.isDisposed()) {
+                console.error(`Original facility mesh is disposed: ${originalMesh.name}`);
+                return null;
+            }
+            
+            // シーンに属していることを確認
+            if (!originalMesh._scene) {
+                console.error(`Original facility mesh is not in scene: ${originalMesh.name}`);
+                return null;
+            }
+            
+            // 深いクローンを作成（子メッシュも含む）
+            const clonedMesh = originalMesh.clone(name, null, false, true);
+            
+            if (!clonedMesh) {
+                console.error('Failed to clone facility asset');
+                return null;
+            }
+            
+            // クローンを有効化
+            clonedMesh.setEnabled(true);
+            
+            // 子メッシュも有効化し、ユニークな名前を付与
+            const childMeshes = clonedMesh.getChildMeshes();
+            childMeshes.forEach((childMesh, index) => {
+                childMesh.setEnabled(true);
+                // 重複を避けるためタイムスタンプを追加
+                const timestamp = Date.now();
+                childMesh.name = `${name}_child${index}_${timestamp}`;
+            });
+            
+            // メッシュプロパティを再設定
+            this.setupMeshProperties(clonedMesh);
+            
+            // バウンディングを再計算
+            this.recalculateParentBounding(clonedMesh);
+            
+            // バウンディング情報をログ出力
+            this.logAssetBoundingInfo(clonedMesh, 'facility');
+            
+            console.log(`Successfully cloned facility asset as ${name} with ${childMeshes.length} child meshes`);
+            
+            return clonedMesh;
+            
+        } catch (error) {
+            console.error('Error cloning facility asset:', error);
+            return null;
+        }
+    }
+
+    /**
      * ロード完了時のコールバックを追加
      * @param {Function} callback - コールバック関数
      */
@@ -716,6 +873,20 @@ export class AssetLoader {
                 model.dispose();
             }
         });
+        
+        // ファシリティアセットキャッシュを破棄
+        this.facilityAssetCache.forEach((mesh, filePath) => {
+            if (mesh && mesh._scene) {
+                // 保護フラグを解除してから破棄
+                mesh.doNotDispose = false;
+                const childMeshes = mesh.getChildMeshes();
+                childMeshes.forEach(child => {
+                    child.doNotDispose = false;
+                });
+                mesh.dispose();
+            }
+        });
+        this.facilityAssetCache.clear();
         
         this.preloadedModels = {
             burger: null,

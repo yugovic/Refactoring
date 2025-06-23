@@ -249,36 +249,32 @@ export class AssetPlacer {
      */
     async placeFacilityAsset(assetFile, position) {
         try {
-            const assetPath = `./assets/Facilities/${assetFile}`;
+            const assetPath = `assets/Facilities/${assetFile}`;
             const timestamp = Date.now();
             const assetName = assetFile.replace('.glb', '');
             const meshName = `facility_${assetName}_${timestamp}`;
             
             console.log(`ファシリティアセットをロード: ${assetPath}`);
             
-            // GLBファイルをロード
-            const result = await BABYLON.SceneLoader.LoadAssetContainerAsync(
-                "",
-                assetPath,
-                this.scene
-            );
+            // AssetLoaderを使用してファシリティアセットをロード
+            const rootMesh = await this.assetLoader.loadFacilityAsset(assetPath, meshName);
             
-            // メッシュを追加
-            result.addAllToScene();
-            
-            // ルートメッシュを取得
-            const rootMesh = result.meshes[0];
             if (!rootMesh) {
-                console.error("ルートメッシュが見つかりません");
+                console.error("ファシリティアセットのロードに失敗");
                 return null;
             }
             
-            // メッシュ名を設定
-            rootMesh.name = meshName;
+            // 確実に有効化
+            rootMesh.setEnabled(true);
             
-            // デフォルトスケールを適用（10%）
-            const scale = this.assetLoader.getDefaultScale('facility');
-            rootMesh.scaling = new BABYLON.Vector3(scale.x, scale.y, scale.z);
+            // 子メッシュも確実に有効化
+            const childMeshes = rootMesh.getChildMeshes();
+            childMeshes.forEach(child => {
+                child.setEnabled(true);
+            });
+            
+            // バウンディングボックスを強制的に再計算（ファシリティアセット特有の処理）
+            this.assetLoader.recalculateParentBounding(rootMesh);
             
             // 位置設定
             this.positionAssetOnFloor(rootMesh, position);
@@ -289,11 +285,14 @@ export class AssetPlacer {
             // バウンディングボックスを作成
             this.createBoundingBox(rootMesh, timestamp);
             
-            // 子メッシュの処理
-            this.processChildMeshes(rootMesh);
-            
             // 影の設定
-            this.setupShadows(rootMesh);
+            this.setupShadow(rootMesh);
+            
+            // 配置されたアセットのリストに追加
+            this.placedAssets.push(rootMesh);
+            
+            // 配置エフェクトを表示
+            this.showPlacementEffect(position, 'facility');
             
             console.log(`ファシリティアセット配置完了: ${meshName}`);
             return rootMesh;
@@ -331,10 +330,8 @@ export class AssetPlacer {
                 childNames: childMeshes.map(c => c.name)
             });
             
-            // 少し待ってからバウンディングボックスを計算
-            setTimeout(() => {
-                this.calculateAndSetPosition(mesh, position, childMeshes);
-            }, 50);
+            // 即座にバウンディングボックスを計算
+            this.calculateAndSetPosition(mesh, position, childMeshes);
             
             return;
             
@@ -364,30 +361,8 @@ export class AssetPlacer {
             // メインメッシュのバウンディング情報を更新
             mesh.refreshBoundingInfo();
             
-            // バウンディングボックスを取得（子メッシュを含む）
-            let boundingInfo;
-            let usedChildMesh = false;
-            
-            if (childMeshes.length > 0) {
-                // 子メッシュがある場合は、子メッシュのバウンディングボックスを使用
-                const validChildren = childMeshes.filter(child => 
-                    child.geometry && child.isEnabled() && !child.isDisposed()
-                );
-                
-                if (validChildren.length > 0) {
-                    console.log(`👶 子メッシュを使用してバウンディングボックス計算 [${mesh.name}]:`, 
-                        validChildren.map(c => c.name));
-                    
-                    // 有効な子メッシュの最初のものを使用
-                    boundingInfo = validChildren[0].getBoundingInfo();
-                    usedChildMesh = true;
-                }
-            }
-            
-            // 子メッシュが使用できない場合はメインメッシュを使用
-            if (!boundingInfo) {
-                boundingInfo = mesh.getBoundingInfo();
-            }
+            // 親メッシュのバウンディングボックスを直接使用（最も効率的）
+            const boundingInfo = mesh.getBoundingInfo();
             
             if (!boundingInfo || !boundingInfo.boundingBox) {
                 console.warn(`⚠️ バウンディングボックスが取得できません: ${mesh.name}`);
@@ -438,12 +413,13 @@ export class AssetPlacer {
             }
             
             console.log(`📦 バウンディングボックス情報 [${mesh.name}]:`, {
-                source: usedChildMesh ? 'child-mesh' : 'main-mesh',
+                source: 'parent-mesh',
                 minY: minY.toFixed(3),
                 maxY: maxY.toFixed(3),
                 height: height.toFixed(3),
                 meshY: mesh.position.y.toFixed(3),
-                targetFloorY: position.y.toFixed(3)
+                targetFloorY: position.y.toFixed(3),
+                childMeshCount: childMeshes.length
             });
             
             // 床面からの正しい位置を計算
