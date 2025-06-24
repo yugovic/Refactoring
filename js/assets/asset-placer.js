@@ -337,6 +337,29 @@ export class AssetPlacer {
     }
 
     /**
+     * 衝突チェックのみを実行（エラーメッセージなし）
+     * @param {BABYLON.Mesh} mesh - チェックするメッシュ
+     * @param {BABYLON.Vector3} position - チェックする位置
+     * @param {BABYLON.Mesh} excludeMesh - 除外するメッシュ（ドラッグ中の自身など）
+     * @returns {boolean} 配置可能な場合true
+     */
+    checkCollisionOnly(mesh, position, excludeMesh = null) {
+        const collisionResult = this.collisionDetector.checkPlacement(mesh, position, excludeMesh);
+        return collisionResult.canPlace;
+    }
+
+    /**
+     * 衝突チェックと詳細情報取得
+     * @param {BABYLON.Mesh} mesh - チェックするメッシュ
+     * @param {BABYLON.Vector3} position - チェックする位置
+     * @param {BABYLON.Mesh} excludeMesh - 除外するメッシュ
+     * @returns {{canPlace: boolean, collisions: Array}} 衝突結果
+     */
+    checkCollisionWithDetails(mesh, position, excludeMesh = null) {
+        return this.collisionDetector.checkPlacement(mesh, position, excludeMesh);
+    }
+
+    /**
      * 衝突チェックとアセット配置
      * @param {BABYLON.Mesh} mesh - 配置するメッシュ
      * @param {BABYLON.Vector3} position - 配置位置
@@ -344,8 +367,8 @@ export class AssetPlacer {
      * @returns {boolean} 配置成功した場合true
      */
     checkAndPlaceAsset(mesh, position, assetType = null) {
-        // まず衝突チェック
-        const collisionResult = this.collisionDetector.checkPlacement(mesh, position);
+        // 統一されたロジックで衝突チェック（詳細情報付き）
+        const collisionResult = this.checkCollisionWithDetails(mesh, position);
         
         if (!collisionResult.canPlace) {
             // 衝突が検出された

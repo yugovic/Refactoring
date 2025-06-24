@@ -516,6 +516,13 @@ export class InteractionManager {
      */
     handlePointerUp() {
         if (this.currentMesh && this.isDragging) {
+            // 最終位置での衝突チェック（初回配置時と同じロジック）
+            const canPlace = this.assetPlacer.checkCollisionOnly(
+                this.currentMesh,
+                this.currentMesh.position,
+                this.currentMesh  // 自分自身を除外
+            );
+            
             // 部屋の境界チェック
             const roomBoundary = this.app.getManager('room').getRoomBoundary();
             const isInside = this.isPositionInsideRoom(this.currentMesh.position, roomBoundary);
@@ -526,6 +533,19 @@ export class InteractionManager {
                     this.currentMesh.position.copyFrom(this.originalPosition);
                 }
                 this.errorHandler.showError("オブジェクトを配置できません。部屋の中に配置してください。");
+            } else if (!canPlace) {
+                // 衝突している場合は元の位置に戻す
+                if (this.originalPosition) {
+                    this.currentMesh.position.copyFrom(this.originalPosition);
+                }
+                // 衝突時のエラーメッセージ（詳細情報付き）
+                const collisionResult = this.assetPlacer.checkCollisionWithDetails(
+                    this.currentMesh,
+                    this.currentMesh.position,
+                    this.currentMesh
+                );
+                const collisionNames = collisionResult.collisions.map(c => c.name).join(', ');
+                this.errorHandler.showError(`配置できません：他のアセット(${collisionNames})と重なります`);
             } else {
                 // グリッドスナップ
                 if (this.gridSystem.isSnapEnabled()) {
@@ -593,23 +613,19 @@ export class InteractionManager {
         newPosition.x += diff.x;
         newPosition.z += diff.z;
         
-        // 衝突チェック（自分自身は除外）
-        const collisionDetector = this.assetPlacer.collisionDetector;
-        const collisionResult = collisionDetector.checkPlacement(
+        // AssetPlacerのcheckCollisionOnlyメソッドを使用（配置時と同じロジック）
+        const canMove = this.assetPlacer.checkCollisionOnly(
             this.currentMesh, 
             newPosition,
             this.currentMesh  // 自分自身を除外
         );
         
         // ドラッグ中のメッシュの外観を更新
-        this.updateDraggedMeshAppearance(this.currentMesh, !collisionResult.canPlace);
+        this.updateDraggedMeshAppearance(this.currentMesh, !canMove);
         
-        // 衝突がない場合のみ移動
-        if (collisionResult.canPlace) {
-            this.currentMesh.position.copyFrom(newPosition);
-            this.startingPoint = current;
-        }
-        // 衝突がある場合は移動しない（スナップ効果）
+        // 初回配置時と同じ動作：常に移動させる（視覚的フィードバックのみ）
+        this.currentMesh.position.copyFrom(newPosition);
+        this.startingPoint = current;
     }
 
     /**
@@ -723,12 +739,11 @@ export class InteractionManager {
             // まず基準位置に配置
             this.previewMesh.position = position.clone();
             
-            // 衝突チェック（プレビュー表示のみで、エラーメッセージは表示しない）
-            const collisionDetector = this.assetPlacer.collisionDetector;
-            const collisionResult = collisionDetector.checkPlacement(this.previewMesh, position);
+            // AssetPlacerのcheckCollisionOnlyメソッドを使用（配置時と同じロジック）
+            const canPlace = this.assetPlacer.checkCollisionOnly(this.previewMesh, position);
             
             // プレビューの透明度を衝突状態に応じて変更
-            this.updatePreviewAppearance(this.previewMesh, !collisionResult.canPlace);
+            this.updatePreviewAppearance(this.previewMesh, !canPlace);
             
             // アセットタイプのプレビューで床配置の場合、バウンディングボックスに基づいた高さ調整を行う
             const assetTypes = ['facility', ASSET_TYPES.CUBE, ASSET_TYPES.RECORD_MACHINE, 
