@@ -390,6 +390,7 @@ export class InteractionManager {
             placedMesh = vehicleManager.placeVehicle(hitPoint);
             if (!placedMesh) {
                 this.errorHandler.showError("車両の配置に失敗しました。");
+                // 車両配置失敗時は配置モードを継続
                 return;
             }
         } else if (this.currentMode === 'uploaded_asset' && activeAssetId) {
@@ -533,6 +534,9 @@ export class InteractionManager {
                     this.currentMesh.position.z = Math.round(this.currentMesh.position.z / gridSize) * gridSize;
                 }
             }
+            
+            // ドラッグ終了時にメッシュの外観をリセット
+            this.resetMeshAppearance(this.currentMesh);
         }
         
         // ドラッグ終了
@@ -584,11 +588,28 @@ export class InteractionManager {
         
         const diff = current.subtract(this.startingPoint);
         
-        // 新しい位置を計算
-        this.currentMesh.position.x += diff.x;
-        this.currentMesh.position.z += diff.z;
+        // 新しい位置を計算（一時的に保存）
+        const newPosition = this.currentMesh.position.clone();
+        newPosition.x += diff.x;
+        newPosition.z += diff.z;
         
-        this.startingPoint = current;
+        // 衝突チェック（自分自身は除外）
+        const collisionDetector = this.assetPlacer.collisionDetector;
+        const collisionResult = collisionDetector.checkPlacement(
+            this.currentMesh, 
+            newPosition,
+            this.currentMesh  // 自分自身を除外
+        );
+        
+        // ドラッグ中のメッシュの外観を更新
+        this.updateDraggedMeshAppearance(this.currentMesh, !collisionResult.canPlace);
+        
+        // 衝突がない場合のみ移動
+        if (collisionResult.canPlace) {
+            this.currentMesh.position.copyFrom(newPosition);
+            this.startingPoint = current;
+        }
+        // 衝突がある場合は移動しない（スナップ効果）
     }
 
     /**
@@ -701,6 +722,13 @@ export class InteractionManager {
         if (this.previewMesh) {
             // まず基準位置に配置
             this.previewMesh.position = position.clone();
+            
+            // 衝突チェック（プレビュー表示のみで、エラーメッセージは表示しない）
+            const collisionDetector = this.assetPlacer.collisionDetector;
+            const collisionResult = collisionDetector.checkPlacement(this.previewMesh, position);
+            
+            // プレビューの透明度を衝突状態に応じて変更
+            this.updatePreviewAppearance(this.previewMesh, !collisionResult.canPlace);
             
             // アセットタイプのプレビューで床配置の場合、バウンディングボックスに基づいた高さ調整を行う
             const assetTypes = ['facility', ASSET_TYPES.CUBE, ASSET_TYPES.RECORD_MACHINE, 
@@ -1001,6 +1029,127 @@ export class InteractionManager {
     }
 
     /**
+     * プレビューの外観を更新（衝突状態に応じて）
+     * @param {BABYLON.Mesh} mesh - プレビューメッシュ
+     * @param {boolean} hasCollision - 衝突しているかどうか
+     */
+    updatePreviewAppearance(mesh, hasCollision) {
+        if (!mesh) return;
+        
+        // メインメッシュと子メッシュの全てのマテリアルを更新
+        const updateMaterial = (targetMesh) => {
+            if (targetMesh.material) {
+                if (hasCollision) {
+                    // 衝突している場合：赤みがかった色に
+                    targetMesh.material.emissiveColor = new BABYLON.Color3(0.5, 0, 0);
+                    targetMesh.material.alpha = 0.3;
+                } else {
+                    // 通常の状態：標準的な半透明
+                    targetMesh.material.emissiveColor = new BABYLON.Color3(0, 0, 0);
+                    targetMesh.material.alpha = 0.5;
+                }
+            }
+        };
+        
+        // メインメッシュを更新
+        updateMaterial(mesh);
+        
+        // 子メッシュも更新
+        if (mesh.getChildMeshes) {
+            mesh.getChildMeshes().forEach(child => updateMaterial(child));
+        }
+    }
+
+    /**
+     * ドラッグ中のメッシュの外観を更新
+     * @param {BABYLON.Mesh} mesh - ドラッグ中のメッシュ
+     * @param {boolean} hasCollision - 衝突しているかどうか
+     */
+    updateDraggedMeshAppearance(mesh, hasCollision) {
+        if (!mesh) return;
+        
+        // 元のマテリアル情報を保存（初回のみ）
+        if (!mesh.metadata.originalMaterials) {
+            mesh.metadata.originalMaterials = new Map();
+            
+            // メインメッシュのマテリアルを保存
+            if (mesh.material) {
+                mesh.metadata.originalMaterials.set(mesh.uniqueId, {
+                    emissiveColor: mesh.material.emissiveColor ? mesh.material.emissiveColor.clone() : new BABYLON.Color3(0, 0, 0),
+                    alpha: mesh.material.alpha || 1.0
+                });
+            }
+            
+            // 子メッシュのマテリアルも保存
+            if (mesh.getChildMeshes) {
+                mesh.getChildMeshes().forEach(child => {
+                    if (child.material) {
+                        mesh.metadata.originalMaterials.set(child.uniqueId, {
+                            emissiveColor: child.material.emissiveColor ? child.material.emissiveColor.clone() : new BABYLON.Color3(0, 0, 0),
+                            alpha: child.material.alpha || 1.0
+                        });
+                    }
+                });
+            }
+        }
+        
+        // メインメッシュと子メッシュの外観を更新
+        const updateMaterial = (targetMesh) => {
+            if (targetMesh.material) {
+                if (hasCollision) {
+                    // 衝突している場合：赤みがかった色に
+                    targetMesh.material.emissiveColor = new BABYLON.Color3(0.5, 0, 0);
+                    targetMesh.material.alpha = 0.7; // ドラッグ中は少し濃いめ
+                } else {
+                    // 通常の状態：元の状態に戻す
+                    const original = mesh.metadata.originalMaterials.get(targetMesh.uniqueId);
+                    if (original) {
+                        targetMesh.material.emissiveColor = original.emissiveColor.clone();
+                        targetMesh.material.alpha = original.alpha;
+                    }
+                }
+            }
+        };
+        
+        // メインメッシュを更新
+        updateMaterial(mesh);
+        
+        // 子メッシュも更新
+        if (mesh.getChildMeshes) {
+            mesh.getChildMeshes().forEach(child => updateMaterial(child));
+        }
+    }
+
+    /**
+     * ドラッグ終了時にメッシュの外観をリセット
+     * @param {BABYLON.Mesh} mesh - メッシュ
+     */
+    resetMeshAppearance(mesh) {
+        if (!mesh || !mesh.metadata.originalMaterials) return;
+        
+        // 元の外観に戻す
+        mesh.metadata.originalMaterials.forEach((original, uniqueId) => {
+            // メインメッシュの場合
+            if (mesh.uniqueId === uniqueId && mesh.material) {
+                mesh.material.emissiveColor = original.emissiveColor.clone();
+                mesh.material.alpha = original.alpha;
+            }
+            
+            // 子メッシュの場合
+            if (mesh.getChildMeshes) {
+                const child = mesh.getChildMeshes().find(c => c.uniqueId === uniqueId);
+                if (child && child.material) {
+                    child.material.emissiveColor = original.emissiveColor.clone();
+                    child.material.alpha = original.alpha;
+                }
+            }
+        });
+        
+        // 保存した情報をクリア
+        delete mesh.metadata.originalMaterials;
+    }
+
+    /**
      * プレビューメッシュの高さを調整（AssetPlacerと同じロジック）
      * @param {BABYLON.Mesh} mesh - プレビューメッシュ
      * @param {BABYLON.Vector3} position - 基準位置
@@ -1071,6 +1220,21 @@ export class InteractionManager {
             this.previewMesh.isVisible = false;
         }
         this.gridSystem.hideVerticalHelper();
+        
+        // 配置済みアセットの色をリセット（赤く光ったままの問題を修正）
+        this.resetAllPlacedAssetsAppearance();
+    }
+
+    /**
+     * 全ての配置済みアセットの外観をリセット
+     */
+    resetAllPlacedAssetsAppearance() {
+        const placedAssets = this.assetPlacer.getPlacedAssets();
+        placedAssets.forEach(mesh => {
+            if (mesh && mesh.metadata && mesh.metadata.originalMaterials) {
+                this.resetMeshAppearance(mesh);
+            }
+        });
     }
 
     /**
@@ -1293,6 +1457,9 @@ export class InteractionManager {
         this.currentFacilityFile = null;
         this.cleanupPreview();
         this.gridSystem.hideVerticalHelper();
+        
+        // 配置モード終了時に全てのアセットの外観をリセット
+        this.resetAllPlacedAssetsAppearance();
         
         // 車両プレビューは統合システムでクリーンアップされるため、個別の処理は不要
         

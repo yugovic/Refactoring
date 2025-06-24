@@ -5,6 +5,7 @@
 
 import { ASSET_TYPES, ASSET_URLS, UI_SETTINGS } from '../config/constants.js';
 import { PRESET_COLORS } from '../utils/color-utils.js';
+import { CollisionDetector } from '../collision/collision-detector.js';
 
 export class AssetPlacer {
     constructor(scene, assetLoader, errorHandler) {
@@ -23,6 +24,9 @@ export class AssetPlacer {
         
         // アップロードアセット用のデフォルトスケール
         this.uploadedAssetScales = new Map();
+        
+        // 衝突検出システムを初期化
+        this.collisionDetector = new CollisionDetector(scene);
     }
 
     /**
@@ -73,6 +77,9 @@ export class AssetPlacer {
                 // リストに追加
                 this.placedAssets.push(mesh);
                 
+                // 衝突検出システムに登録
+                this.collisionDetector.registerAsset(mesh);
+                
                 // 影を設定
                 this.setupShadow(mesh);
                 
@@ -112,7 +119,12 @@ export class AssetPlacer {
             const burger = this.assetLoader.cloneModel('burger', `burger_${timestamp}`);
             
             if (burger) {
-                this.positionAssetOnFloor(burger, position);
+                // 衝突チェック
+                if (!this.checkAndPlaceAsset(burger, position, ASSET_TYPES.CUBE)) {
+                    burger.dispose();
+                    return null;
+                }
+                
                 this.applyWallRotation(burger);
                 this.setupMeshInteraction(burger, ASSET_TYPES.CUBE);
                 this.createBoundingBox(burger, timestamp);
@@ -137,7 +149,12 @@ export class AssetPlacer {
             const record = this.assetLoader.cloneModel('recordMachine', `record_${timestamp}`);
             
             if (record) {
-                this.positionAssetOnFloor(record, position);
+                // 衝突チェック
+                if (!this.checkAndPlaceAsset(record, position, ASSET_TYPES.RECORD_MACHINE)) {
+                    record.dispose();
+                    return null;
+                }
+                
                 this.applyWallRotation(record);
                 this.setupMeshInteraction(record, ASSET_TYPES.RECORD_MACHINE);
                 this.createBoundingBox(record, timestamp);
@@ -161,7 +178,12 @@ export class AssetPlacer {
             const juiceBox = this.assetLoader.cloneModel('juiceBox', `juiceBox_${timestamp}`);
             
             if (juiceBox) {
-                this.positionAssetOnFloor(juiceBox, position);
+                // 衝突チェック
+                if (!this.checkAndPlaceAsset(juiceBox, position, ASSET_TYPES.JUICE_BOX)) {
+                    juiceBox.dispose();
+                    return null;
+                }
+                
                 this.applyWallRotation(juiceBox);
                 this.setupMeshInteraction(juiceBox, ASSET_TYPES.JUICE_BOX);
                 this.createBoundingBox(juiceBox, timestamp);
@@ -210,7 +232,12 @@ export class AssetPlacer {
             placementTime: Date.now()
         };
         
-        this.positionAssetOnFloor(mesh, position);
+        // 衝突チェック
+        if (!this.checkAndPlaceAsset(mesh, position, ASSET_TYPES.MIKE_DESK)) {
+            mesh.dispose();
+            return null;
+        }
+        
         this.applyWallRotation(mesh);
         this.setupMeshInteraction(mesh, ASSET_TYPES.MIKE_DESK);
         
@@ -228,7 +255,12 @@ export class AssetPlacer {
             const trophy = this.assetLoader.cloneModel('trophy', `trophy_${timestamp}`);
             
             if (trophy) {
-                this.positionAssetOnFloor(trophy, position);
+                // 衝突チェック
+                if (!this.checkAndPlaceAsset(trophy, position, ASSET_TYPES.TROPHY)) {
+                    trophy.dispose();
+                    return null;
+                }
+                
                 this.applyWallRotation(trophy);
                 this.setupMeshInteraction(trophy, ASSET_TYPES.TROPHY);
                 this.createBoundingBox(trophy, timestamp);
@@ -276,8 +308,11 @@ export class AssetPlacer {
             // バウンディングボックスを強制的に再計算（ファシリティアセット特有の処理）
             this.assetLoader.recalculateParentBounding(rootMesh);
             
-            // 位置設定
-            this.positionAssetOnFloor(rootMesh, position);
+            // 衝突チェックと位置設定
+            if (!this.checkAndPlaceAsset(rootMesh, position, 'facility')) {
+                rootMesh.dispose();
+                return null;
+            }
             
             // インタラクション設定
             this.setupMeshInteraction(rootMesh, 'facility');
@@ -287,9 +322,6 @@ export class AssetPlacer {
             
             // 影の設定
             this.setupShadow(rootMesh);
-            
-            // 配置されたアセットのリストに追加
-            this.placedAssets.push(rootMesh);
             
             // 配置エフェクトを表示
             this.showPlacementEffect(position, 'facility');
@@ -302,6 +334,37 @@ export class AssetPlacer {
             this.errorHandler.showError(`アセットの配置に失敗しました: ${error.message}`);
             return null;
         }
+    }
+
+    /**
+     * 衝突チェックとアセット配置
+     * @param {BABYLON.Mesh} mesh - 配置するメッシュ
+     * @param {BABYLON.Vector3} position - 配置位置
+     * @param {string} assetType - アセットタイプ
+     * @returns {boolean} 配置成功した場合true
+     */
+    checkAndPlaceAsset(mesh, position, assetType = null) {
+        // まず衝突チェック
+        const collisionResult = this.collisionDetector.checkPlacement(mesh, position);
+        
+        if (!collisionResult.canPlace) {
+            // 衝突が検出された
+            const collisionNames = collisionResult.collisions.map(c => c.name).join(', ');
+            this.errorHandler.showError(`配置できません：他のアセット(${collisionNames})と重なります`);
+            console.log(`⚠️ 配置キャンセル: ${collisionResult.collisions.length}個のアセットと衝突`);
+            return false;
+        }
+        
+        // 配置処理
+        this.positionAssetOnFloor(mesh, position);
+        
+        // 衝突検出システムに登録（placeAssetでも行われるが、直接呼び出し用に重複チェック込みで実行）
+        if (!this.placedAssets.includes(mesh)) {
+            this.placedAssets.push(mesh);
+            this.collisionDetector.registerAsset(mesh);
+        }
+        
+        return true;
     }
 
     /**
@@ -1040,6 +1103,9 @@ export class AssetPlacer {
             this.placedAssets.splice(index, 1);
         }
         
+        // 衝突検出システムからも削除
+        this.collisionDetector.unregisterAsset(mesh);
+        
         if (mesh && mesh._scene) {
             mesh.dispose();
         }
@@ -1056,6 +1122,10 @@ export class AssetPlacer {
         });
         
         this.placedAssets = [];
+        
+        // 衝突検出システムもクリア
+        this.collisionDetector.clear();
+        
         console.log("All placed assets cleared");
     }
 
@@ -1287,6 +1357,23 @@ export class AssetPlacer {
         console.log(`📊 表示中のバウンディングボックス: ${visibleBoxes.length}個`);
     }
     
+    /**
+     * 衝突検出システムのデバッグモードを切り替え
+     * @param {boolean} enabled - 有効/無効
+     */
+    toggleCollisionDebugMode(enabled) {
+        this.collisionDetector.setDebugMode(enabled);
+        console.log(`衝突検出デバッグモード: ${enabled ? 'ON' : 'OFF'}`);
+    }
+
+    /**
+     * 衝突検出マージンを設定
+     * @param {number} margin - マージン（メートル単位）
+     */
+    setCollisionMargin(margin) {
+        this.collisionDetector.setCollisionMargin(margin);
+    }
+
     /**
      * ピッキング問題の診断
      */
