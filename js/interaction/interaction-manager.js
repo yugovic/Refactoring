@@ -121,6 +121,13 @@ export class InteractionManager {
             meshName: pickResult.hit ? pickResult.pickedMesh.name : "no mesh"
         });
         
+        // UI要素のチェックを最初に行う
+        if (pickResult.hit && pickResult.pickedMesh && 
+            pickResult.pickedMesh.metadata && pickResult.pickedMesh.metadata.isUIElement) {
+            console.log("UI要素がクリックされました。処理をスキップします:", pickResult.pickedMesh.name);
+            return;
+        }
+        
         if (this.isPlacing) {
             console.log("配置処理を開始します");
             this.handlePlacement(pickResult);
@@ -173,6 +180,13 @@ export class InteractionManager {
         
         // 配置済みアセットの子メッシュをチェック
         let targetMesh = pickInfo.pickedMesh;
+        
+        // UI要素（回転ボタンなど）をクリックした場合は無視
+        if (targetMesh.metadata && targetMesh.metadata.isUIElement) {
+            console.log("UI要素クリックを検出:", targetMesh.name);
+            // UI要素の場合は選択処理も含めて完全に無視
+            return;
+        }
         
         // 車両の子メッシュかどうかをチェック（車両は特別な名前パターンを持つ）
         const isVehiclePart = targetMesh.name.includes("cosmo") || 

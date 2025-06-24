@@ -3,6 +3,8 @@
  * オブジェクトの選択とハイライトを管理するクラス
  */
 
+import { AssetRotationUI } from '../ui/asset-rotation-ui.js';
+
 export class SelectionController {
     constructor(scene, highlightLayer, errorHandler, app) {
         this.scene = scene;
@@ -16,6 +18,20 @@ export class SelectionController {
         // 選択時のコールバック
         this.onSelectCallbacks = [];
         this.onDeselectCallbacks = [];
+        
+        // 回転UI
+        this.rotationUI = null;
+    }
+
+    /**
+     * 初期化
+     */
+    initialize() {
+        // 回転UIを初期化
+        this.rotationUI = new AssetRotationUI(this.scene, this.app);
+        this.rotationUI.initialize();
+        
+        console.log("SelectionController initialized with rotation UI");
     }
 
     /**
@@ -52,6 +68,11 @@ export class SelectionController {
                 // 選択時のフィードバック
                 this.showSelectionFeedback(mesh);
                 
+                // 回転ボタンを表示（配置済みアセットの場合のみ）
+                if (this.isUserPlacedMesh(mesh) && this.rotationUI) {
+                    this.rotationUI.showRotationButton(mesh);
+                }
+                
                 console.log("Mesh selected:", {
                     name: mesh.name,
                     isPickable: mesh.isPickable,
@@ -83,6 +104,11 @@ export class SelectionController {
         try {
             // ハイライトを解除
             this.removeHighlight(this.selectedMesh);
+            
+            // 回転ボタンを非表示
+            if (this.rotationUI) {
+                this.rotationUI.hideRotationButton();
+            }
             
             const previousMesh = this.selectedMesh;
             this.selectedMesh = null;
@@ -314,7 +340,7 @@ export class SelectionController {
      * 選択中のメッシュを回転
      * @param {number} angle - 回転角度（ラジアン）
      */
-    rotateSelectedMesh(angle = Math.PI / 2) {
+    rotateSelectedMesh(angle = -Math.PI / 2) {
         if (!this.selectedMesh || this.selectedMesh.isDisposed()) return;
         
         this.selectedMesh.rotation.y += angle;
@@ -427,6 +453,16 @@ export class SelectionController {
     }
 
     /**
+     * フレーム更新
+     */
+    update() {
+        // 回転UIの更新
+        if (this.rotationUI) {
+            this.rotationUI.update();
+        }
+    }
+
+    /**
      * クリーンアップ
      */
     dispose() {
@@ -434,6 +470,12 @@ export class SelectionController {
         
         this.deselectAll();
         this.clearCallbacks();
+        
+        // 回転UIをクリーンアップ
+        if (this.rotationUI) {
+            this.rotationUI.dispose();
+            this.rotationUI = null;
+        }
         
         this.selectedMesh = null;
         this.highlightLayer = null;

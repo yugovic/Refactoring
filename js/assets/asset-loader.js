@@ -532,8 +532,14 @@ export class AssetLoader {
                         const rootMesh = meshes[0];
                         rootMesh.name = name;
                         
-                        // スケールを設定
-                        rootMesh.scaling = new BABYLON.Vector3(0.1, 0.1, 0.1);
+                        // スケールを設定（Tripo.glbは特別なスケール）
+                        if (filePath.includes('Tripo.glb')) {
+                            // ジュースボックスと同じサイズになるよう調整
+                            // 100倍の1/20 = 5倍のスケールに設定
+                            rootMesh.scaling = new BABYLON.Vector3(5, 5, 5);
+                        } else {
+                            rootMesh.scaling = new BABYLON.Vector3(0.1, 0.1, 0.1);
+                        }
                         
                         // メッシュプロパティを設定
                         this.setupMeshProperties(rootMesh);

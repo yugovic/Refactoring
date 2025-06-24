@@ -77,6 +77,9 @@ export class App {
             this.managers.interaction.initialize();
             this.managers.ui.initialize();
             
+            // SelectionControllerを初期化
+            this.managers.selection.initialize();
+            
             // アップロードマネージャーを初期化
             this.managers.upload.initialize();
             
@@ -207,6 +210,14 @@ export class App {
             console.error("Application not initialized");
             return;
         }
+
+        // レンダーループにSelectionControllerのupdateを追加
+        const scene = this.managers.scene.getScene();
+        scene.registerBeforeRender(() => {
+            if (this.managers.selection) {
+                this.managers.selection.update();
+            }
+        });
 
         this.managers.scene.startRenderLoop();
         console.log("Application started");
