@@ -7,7 +7,7 @@ export const DEFAULT_SETTINGS = {
     // グリッド設定
     grid: {
         size: 1.0,
-        show: true,
+        show: false,
         snapToGrid: true
     },
     
