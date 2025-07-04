@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>保存データクリア</title>
+</head>
+<body>
+    <h1>3Dアセット配置 - 保存データクリア</h1>
+    <p>このページを開くと、保存されたアセット配置データがクリアされます。</p>
+    <button onclick="clearData()">データをクリア</button>
+    <div id="result"></div>
+    
+    <script>
+        function clearData() {
+            // LocalStorageから保存データを削除
+            const keys = ['assetScales', 'vehicleScale', 'placedAssets', 'savedScene'];
+            keys.forEach(key => {
+                if (localStorage.getItem(key)) {
+                    localStorage.removeItem(key);
+                    console.log(`${key} を削除しました`);
+                }
+            });
+            
+            // すべてのLocalStorageデータを確認
+            console.log('現在のLocalStorage:');
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                console.log(`${key}: ${localStorage.getItem(key)}`);
+            }
+            
+            document.getElementById('result').innerHTML = '<p style="color: green;">保存データをクリアしました。メインページに戻ってリロードしてください。</p>';
+        }
+    </script>
+</body>
+</html>

@@ -188,6 +188,52 @@ html, body {
     background-color: #F57C00;
 }
 
+/* 車両アニメーションコントロール */
+.animation-controls {
+    position: fixed;
+    bottom: 70px;
+    right: 10px;
+    background-color: rgba(0, 0, 0, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    padding: 10px;
+    width: 200px;
+    color: white;
+    z-index: 10;
+}
+
+.animation-controls h4 {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    text-align: center;
+}
+
+.animation-buttons {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 10px;
+}
+
+.animation-buttons button {
+    flex: 1;
+    padding: 5px;
+    font-size: 12px;
+}
+
+.animation-speed {
+    margin-top: 10px;
+}
+
+.animation-speed label {
+    display: block;
+    font-size: 12px;
+    margin-bottom: 5px;
+}
+
+.animation-speed input[type="range"] {
+    width: 100%;
+}
+
 
 
 .controls button {

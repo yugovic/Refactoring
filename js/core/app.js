@@ -20,6 +20,7 @@ import { UploadManager } from '../assets/upload-manager.js';
 import { VehicleManager } from '../assets/vehicle-manager.js';
 import { AudioManager } from '../audio/audio-manager.js';
 import { BoundingBoxDebug } from '../debug/bounding-box-debug.js';
+import { VehicleAnimation } from '../animation/vehicle-animation.js';
 
 export class App {
     constructor(canvas) {
@@ -94,6 +95,12 @@ export class App {
             // バウンディングボックスデバッグを初期化
             this.managers.boundingBoxDebug = new BoundingBoxDebug(this.managers.scene.getScene());
             
+            // 車両アニメーションを初期化
+            this.managers.vehicleAnimation = new VehicleAnimation(
+                this.managers.scene.getScene(),
+                this.managers.vehicle
+            );
+            
             // スケール設定を復元
             this.managers.assetPlacer.loadScaleSettings();
             
@@ -107,6 +114,13 @@ export class App {
             // ローディング表示を非表示
             setTimeout(() => {
                 this.loadingManager.hide();
+                
+                // 車両アニメーションを開始
+                if (this.managers.vehicleAnimation) {
+                    console.log('Starting vehicle animation...');
+                    this.managers.vehicleAnimation.start();
+                }
+                
                 // 車両選択モーダルを表示（少し遅延させてDOM要素が確実に読み込まれるようにする）
                 setTimeout(() => {
                     console.log('Attempting to show vehicle modal...');

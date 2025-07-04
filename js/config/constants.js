@@ -52,12 +52,12 @@ export const MODEL_SCALES = {
     DEFAULT: { x: 0.1, y: 0.1, z: 0.1 }         // デフォルトスケール (10%)
 };
 
-// 部屋の境界
+// 部屋の境界（12×12に設定）
 export const ROOM_BOUNDARY = {
-    MIN_X: -9,
-    MAX_X: 9,
-    MIN_Z: -9,
-    MAX_Z: 9,
+    MIN_X: -6,
+    MAX_X: 6,
+    MIN_Z: -6,
+    MAX_Z: 6,
     MIN_Y: 0.1,  // 床面より少し上
     MAX_Y: 5.0   // 天井の高さ
 };
@@ -78,7 +78,7 @@ export const CAMERA_SETTINGS = {
         MAX_RADIUS: 25,
         MIN_BETA: 0.1,
         MAX_BETA: Math.PI / 2,
-        MIN_Z: 0.01,
+        MIN_Z: 0.1,  // 0.01から0.1に変更（透過問題対策）
         MAX_Z: 1000
     },
     
@@ -220,16 +220,15 @@ export const NETWORK_SETTINGS = {
 };
 
 // 環境装飾オブジェクト設定
+// 36×36の描画範囲（-18から+18）内のオブジェクトのみ配置
 export const ENVIRONMENT_OBJECTS = {
     TREES: [
         { position: { x: 15, y: 0, z: 8 }, scale: { x: 0.8, y: 1.2, z: 0.8 } },
         { position: { x: -12, y: 0, z: -15 }, scale: { x: 1.0, y: 1.1, z: 1.0 } },
-        { position: { x: 18, y: 0, z: -10 }, scale: { x: 0.9, y: 1.3, z: 0.9 } },
-        { position: { x: -20, y: 0, z: 12 }, scale: { x: 1.1, y: 1.0, z: 1.1 } }
+        { position: { x: 18, y: 0, z: -10 }, scale: { x: 0.9, y: 1.3, z: 0.9 } }
     ],
     BUILDINGS: [
-        { position: { x: -25, y: 0, z: -8 }, scale: { x: 2.0, y: 1.5, z: 1.8 }, rotation: { y: 0.3 } },
-        { position: { x: 22, y: 0, z: 15 }, scale: { x: 1.5, y: 2.0, z: 1.2 }, rotation: { y: -0.8 } },
-        { position: { x: 12, y: 0, z: -22 }, scale: { x: 1.8, y: 1.8, z: 2.2 }, rotation: { y: 1.2 } }
+        // 範囲内に収まる位置に建物を1つ配置
+        { position: { x: 10, y: 0, z: -10 }, scale: { x: 1.5, y: 1.8, z: 1.5 }, rotation: { y: 0.5 } }
     ]
 };

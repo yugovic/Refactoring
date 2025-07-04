@@ -5,6 +5,7 @@
 
 import { ASSET_TYPES, BACKGROUND_360_SETTINGS } from '../config/constants.js';
 import { color3ToHex } from '../utils/color-utils.js';
+import { AnimationControls } from './animation-controls.js';
 
 export class UIManager {
     constructor(app, errorHandler) {
@@ -27,6 +28,9 @@ export class UIManager {
         
         // 1人称モードガイド
         this.firstPersonGuide = null;
+        
+        // アニメーションコントロール
+        this.animationControls = null;
     }
 
     /**
@@ -42,6 +46,9 @@ export class UIManager {
             
             // 初期値を設定
             this.setInitialValues();
+            
+            // アニメーションコントロールを初期化
+            this.initializeAnimationControls();
             
             // 位置インジケーターを作成
             this.createPositionIndicator();
@@ -1456,8 +1463,22 @@ const cameraSettings = {
             this.firstPersonGuide.parentNode.removeChild(this.firstPersonGuide);
         }
         
+        // アニメーションコントロールをクリーンアップ
+        if (this.animationControls) {
+            this.animationControls.dispose();
+            this.animationControls = null;
+        }
+        
         // 参照をクリア
         this.elements = {};
+    }
+    
+    /**
+     * アニメーションコントロールを初期化
+     */
+    initializeAnimationControls() {
+        this.animationControls = new AnimationControls(this);
+        this.animationControls.initialize();
     }
     
     /**
