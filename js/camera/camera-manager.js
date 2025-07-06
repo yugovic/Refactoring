@@ -70,7 +70,7 @@ export class CameraManager {
         this.isometricCamera.panningSensibility = DEFAULT_SETTINGS.camera.panningSensibility;
         
         // クリッピングプレーンを設定
-        this.isometricCamera.minZ = limits.MIN_Z;
+        this.isometricCamera.minZ = 0.01;  // 非常に小さい正の値に設定
         this.isometricCamera.maxZ = limits.MAX_Z;
         
         // カメラコントロールの設定

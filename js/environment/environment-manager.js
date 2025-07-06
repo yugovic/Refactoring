@@ -160,33 +160,73 @@ export class EnvironmentManager {
             this.scene
         );
 
-        // 建物のマテリアル（グレー）
+        // 建物のマテリアル（レンガ風の色）
         const buildingMaterial = new BABYLON.StandardMaterial(`${name}_material`, this.scene);
-        buildingMaterial.diffuseColor = new BABYLON.Color3(0.7, 0.7, 0.8);
-        buildingMaterial.specularColor = new BABYLON.Color3(0.1, 0.1, 0.1);
+        buildingMaterial.diffuseColor = new BABYLON.Color3(0.8, 0.6, 0.5);
+        buildingMaterial.specularColor = new BABYLON.Color3(0.05, 0.05, 0.05);
         mainBuilding.material = buildingMaterial;
 
-        // 屋根を作成
+        // 基礎部分を作成
+        const foundation = BABYLON.MeshBuilder.CreateBox(
+            `${name}_foundation`,
+            {
+                width: 4.2,
+                height: 0.5,
+                depth: 3.2
+            },
+            this.scene
+        );
+        const foundationMaterial = new BABYLON.StandardMaterial(`${name}_foundationMat`, this.scene);
+        foundationMaterial.diffuseColor = new BABYLON.Color3(0.4, 0.4, 0.4);
+        foundation.material = foundationMaterial;
+        foundation.position.y = -2.75;
+        foundation.parent = mainBuilding;
+
+        // 窓を作成
+        this.createWindows(mainBuilding, name);
+
+        // ドアを作成
+        this.createDoor(mainBuilding, name);
+
+        // 屋根を作成（改良版）
         const roof = BABYLON.MeshBuilder.CreateCylinder(
             `${name}_roof`, 
             {
                 diameterTop: 0,
-                diameterBottom: 5.0,
-                height: 2.0,
+                diameterBottom: 5.5,
+                height: 2.5,
                 tessellation: 4
             }, 
             this.scene
         );
 
-        // 屋根のマテリアル（赤茶色）
+        // 屋根のマテリアル（瓦風の濃い赤茶色）
         const roofMaterial = new BABYLON.StandardMaterial(`${name}_roofMaterial`, this.scene);
-        roofMaterial.diffuseColor = new BABYLON.Color3(0.6, 0.2, 0.1);
-        roofMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
+        roofMaterial.diffuseColor = new BABYLON.Color3(0.5, 0.15, 0.1);
+        roofMaterial.specularColor = new BABYLON.Color3(0.1, 0.1, 0.1);
         roof.material = roofMaterial;
 
         // 屋根を建物の上に配置
-        roof.position.y = 4.0;
+        roof.position.y = 4.25;
         roof.rotation.y = Math.PI / 4; // 45度回転
+
+        // 煙突を作成
+        const chimney = BABYLON.MeshBuilder.CreateBox(
+            `${name}_chimney`,
+            {
+                width: 0.6,
+                height: 2.0,
+                depth: 0.6
+            },
+            this.scene
+        );
+        const chimneyMaterial = new BABYLON.StandardMaterial(`${name}_chimneyMat`, this.scene);
+        chimneyMaterial.diffuseColor = new BABYLON.Color3(0.3, 0.3, 0.3);
+        chimney.material = chimneyMaterial;
+        chimney.position.x = 1.2;
+        chimney.position.y = 5.0;
+        chimney.position.z = 0;
+        chimney.parent = mainBuilding;
 
         // 親子関係を設定
         roof.parent = mainBuilding;
@@ -199,17 +239,121 @@ export class EnvironmentManager {
             mainBuilding.rotation.y = config.rotation.y;
         }
 
-        // 建物を選択不可に設定
+        // すべてのパーツを選択不可に設定
         mainBuilding.isPickable = false;
         roof.isPickable = false;
+        foundation.isPickable = false;
+        chimney.isPickable = false;
 
-        // 影を受ける設定
+        // すべてのパーツが影を受ける設定
         mainBuilding.receiveShadows = true;
         roof.receiveShadows = true;
+        foundation.receiveShadows = true;
+        chimney.receiveShadows = true;
+        
+        // 窓とドアも影を受ける
+        mainBuilding.getChildMeshes().forEach(child => {
+            child.receiveShadows = true;
+            child.isPickable = false;
+        });
 
         console.log(`🏠 建物作成: ${name} at (${config.position.x}, ${config.position.z})`);
 
         return mainBuilding;
+    }
+
+    /**
+     * 建物に窓を作成
+     * @param {BABYLON.Mesh} building - 建物メッシュ
+     * @param {string} name - 建物の名前
+     */
+    createWindows(building, name) {
+        const windowMaterial = new BABYLON.StandardMaterial(`${name}_windowMat`, this.scene);
+        windowMaterial.diffuseColor = new BABYLON.Color3(0.2, 0.3, 0.4);
+        windowMaterial.emissiveColor = new BABYLON.Color3(0.1, 0.15, 0.2);
+        windowMaterial.specularColor = new BABYLON.Color3(0.3, 0.3, 0.3);
+        
+        // 前面の窓（2つ）
+        for (let i = 0; i < 2; i++) {
+            const frontWindow = BABYLON.MeshBuilder.CreateBox(
+                `${name}_frontWindow${i}`,
+                {
+                    width: 0.8,
+                    height: 1.2,
+                    depth: 0.1
+                },
+                this.scene
+            );
+            frontWindow.material = windowMaterial;
+            frontWindow.position.x = i === 0 ? -0.8 : 0.8;
+            frontWindow.position.y = 1.0;
+            frontWindow.position.z = 1.51;
+            frontWindow.parent = building;
+        }
+        
+        // 側面の窓（各側面に1つずつ）
+        for (let side = 0; side < 2; side++) {
+            const sideWindow = BABYLON.MeshBuilder.CreateBox(
+                `${name}_sideWindow${side}`,
+                {
+                    width: 0.1,
+                    height: 1.2,
+                    depth: 0.8
+                },
+                this.scene
+            );
+            sideWindow.material = windowMaterial;
+            sideWindow.position.x = side === 0 ? 2.01 : -2.01;
+            sideWindow.position.y = 1.0;
+            sideWindow.position.z = 0;
+            sideWindow.parent = building;
+        }
+    }
+
+    /**
+     * 建物にドアを作成
+     * @param {BABYLON.Mesh} building - 建物メッシュ
+     * @param {string} name - 建物の名前
+     */
+    createDoor(building, name) {
+        const door = BABYLON.MeshBuilder.CreateBox(
+            `${name}_door`,
+            {
+                width: 1.0,
+                height: 2.0,
+                depth: 0.1
+            },
+            this.scene
+        );
+        
+        const doorMaterial = new BABYLON.StandardMaterial(`${name}_doorMat`, this.scene);
+        doorMaterial.diffuseColor = new BABYLON.Color3(0.4, 0.25, 0.15);
+        doorMaterial.specularColor = new BABYLON.Color3(0.1, 0.1, 0.1);
+        door.material = doorMaterial;
+        
+        door.position.x = 0;
+        door.position.y = -2.0;
+        door.position.z = 1.51;
+        door.parent = building;
+        
+        // ドアノブ
+        const doorKnob = BABYLON.MeshBuilder.CreateSphere(
+            `${name}_doorKnob`,
+            {
+                diameter: 0.1,
+                segments: 8
+            },
+            this.scene
+        );
+        const knobMaterial = new BABYLON.StandardMaterial(`${name}_knobMat`, this.scene);
+        knobMaterial.diffuseColor = new BABYLON.Color3(0.8, 0.7, 0.3);
+        knobMaterial.specularColor = new BABYLON.Color3(0.5, 0.5, 0.5);
+        doorKnob.material = knobMaterial;
+        
+        doorKnob.position.x = 0.35;
+        doorKnob.position.y = 0;
+        doorKnob.position.z = 0.1;
+        doorKnob.parent = door;
     }
 
     /**

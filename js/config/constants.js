@@ -68,17 +68,17 @@ export const CAMERA_SETTINGS = {
     DEFAULT: {
         ALPHA: -Math.PI / 4,    // -45度
         BETA: Math.PI / 4,      // 45度
-        RADIUS: 20,             // 最大値に設定
+        RADIUS: 20,             // 元の値に戻す
         TARGET: { x: 0, y: 1, z: 0 }  // Y座標を上げて画面中央に表示
     },
     
     // カメラ制限
     LIMITS: {
         MIN_RADIUS: 10,
-        MAX_RADIUS: 25,
+        MAX_RADIUS: 25,  // 元の値に戻す
         MIN_BETA: 0.1,
         MAX_BETA: Math.PI / 2,
-        MIN_Z: 0.1,  // 0.01から0.1に変更（透過問題対策）
+        MIN_Z: 0.01,  // 小さい正の値に戻す
         MAX_Z: 1000
     },
     
@@ -223,12 +223,13 @@ export const NETWORK_SETTINGS = {
 // 36×36の描画範囲（-18から+18）内のオブジェクトのみ配置
 export const ENVIRONMENT_OBJECTS = {
     TREES: [
-        { position: { x: 15, y: 0, z: 8 }, scale: { x: 0.8, y: 1.2, z: 0.8 } },
-        { position: { x: -12, y: 0, z: -15 }, scale: { x: 1.0, y: 1.1, z: 1.0 } },
-        { position: { x: 18, y: 0, z: -10 }, scale: { x: 0.9, y: 1.3, z: 0.9 } }
+        // 木のサイズを考慮して、描画範囲の端から内側に配置
+        { position: { x: 12, y: 0, z: 8 }, scale: { x: 0.8, y: 1.2, z: 0.8 } },      // 15→12に調整
+        { position: { x: -10, y: 0, z: -12 }, scale: { x: 1.0, y: 1.1, z: 1.0 } },   // -12,-15→-10,-12に調整
+        { position: { x: 14, y: 0, z: -8 }, scale: { x: 0.9, y: 1.3, z: 0.9 } }      // 18,-10→14,-8に調整
     ],
     BUILDINGS: [
-        // 範囲内に収まる位置に建物を1つ配置
-        { position: { x: 10, y: 0, z: -10 }, scale: { x: 1.5, y: 1.8, z: 1.5 }, rotation: { y: 0.5 } }
+        // 建物のサイズ（幅4×1.5=6、奥行3×1.5=4.5）を考慮して、描画範囲内に収まるよう調整
+        { position: { x: 10, y: 0, z: -10 }, scale: { x: 1.5, y: 1.8, z: 1.5 }, rotation: { y: 0.5 } }  // 14,-14→10,-10に調整
     ]
 };
