@@ -21,6 +21,9 @@ export class RoomManager {
         // シャドウレシーバーとキャスター
         this.shadowReceivers = [];
         this.shadowCasters = [];
+        
+        // テクスチャーマネージャー
+        this.textureManager = null;
     }
 
     /**
@@ -335,6 +338,44 @@ export class RoomManager {
         return boundaryLine;
     }
 
+    /**
+     * テクスチャーマネージャーを設定
+     * @param {TextureManager} textureManager 
+     */
+    setTextureManager(textureManager) {
+        this.textureManager = textureManager;
+    }
+    
+    /**
+     * 床のテクスチャーを変更
+     * @param {string} textureKey - テクスチャーキー
+     */
+    changeFloorTexture(textureKey) {
+        if (!this.textureManager) {
+            console.error('TextureManager not set');
+            return;
+        }
+        
+        if (this.ground) {
+            this.textureManager.applyFloorTexture(textureKey, this.ground);
+        }
+    }
+    
+    /**
+     * 壁のテクスチャーを変更
+     * @param {string} textureKey - テクスチャーキー
+     */
+    changeWallTexture(textureKey) {
+        if (!this.textureManager) {
+            console.error('TextureManager not set');
+            return;
+        }
+        
+        if (this.walls.length > 0) {
+            this.textureManager.applyWallTexture(textureKey, this.walls);
+        }
+    }
+    
     // ゲッターメソッド
     getGround() { return this.ground; }
     getWalls() { return this.walls; }

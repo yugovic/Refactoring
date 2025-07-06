@@ -186,6 +186,12 @@ export class UIManager {
             volumeSlider: document.getElementById("volumeSlider"),
             volumeValue: document.getElementById("volumeValue")
         };
+        
+        // ルーム設定
+        this.elements.roomSettings = {
+            floorTextureSelect: document.getElementById("floorTextureSelect"),
+            wallTextureSelect: document.getElementById("wallTextureSelect")
+        };
     }
 
     /**
@@ -233,6 +239,9 @@ export class UIManager {
         
         // カテゴリー折りたたみ機能
         this.setupCategoryToggles();
+        
+        // ルーム設定
+        this.setupRoomTextureControls();
     }
 
     /**
@@ -1091,6 +1100,35 @@ export class UIManager {
         if (this.elements.helpPanel) {
             this.elements.helpPanel.style.display = "none";
             this.helpPanelVisible = false;
+        }
+    }
+
+    /**
+     * ルームテクスチャーコントロールを設定
+     */
+    setupRoomTextureControls() {
+        // 床テクスチャー選択
+        if (this.elements.roomSettings.floorTextureSelect) {
+            this.elements.roomSettings.floorTextureSelect.addEventListener('change', (e) => {
+                const textureKey = e.target.value;
+                const roomManager = this.app.getManager('room');
+                if (roomManager) {
+                    roomManager.changeFloorTexture(textureKey);
+                    console.log(`Floor texture changed to: ${textureKey}`);
+                }
+            });
+        }
+        
+        // 壁テクスチャー選択
+        if (this.elements.roomSettings.wallTextureSelect) {
+            this.elements.roomSettings.wallTextureSelect.addEventListener('change', (e) => {
+                const textureKey = e.target.value;
+                const roomManager = this.app.getManager('room');
+                if (roomManager) {
+                    roomManager.changeWallTexture(textureKey);
+                    console.log(`Wall texture changed to: ${textureKey}`);
+                }
+            });
         }
     }
 

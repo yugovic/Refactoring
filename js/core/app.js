@@ -16,6 +16,7 @@ import { UIManager } from '../ui/ui-manager.js';
 import { SelectionController } from '../interaction/selection-controller.js';
 import { LoadingManager } from '../ui/loading-manager.js';
 import { EnvironmentManager } from '../environment/environment-manager.js';
+import { TextureManager } from '../environment/texture-manager.js';
 import { UploadManager } from '../assets/upload-manager.js';
 import { VehicleManager } from '../assets/vehicle-manager.js';
 import { AudioManager } from '../audio/audio-manager.js';
@@ -67,8 +68,13 @@ export class App {
             this.managers.interaction = new InteractionManager(this, errorHandler);
             this.managers.ui = new UIManager(this, errorHandler);
             this.managers.environment = new EnvironmentManager(scene, errorHandler);
+            this.managers.texture = new TextureManager(scene, errorHandler);
             this.managers.upload = new UploadManager(scene, this.managers.assetPlacer, errorHandler);
             this.managers.vehicle = new VehicleManager(scene, this.managers.assetLoader, errorHandler);
+            
+            // RoomManagerにTextureManagerを設定
+            this.managers.room.setTextureManager(this.managers.texture);
+            
             this.loadingManager.setProgress(40);
 
             // 環境をセットアップ
