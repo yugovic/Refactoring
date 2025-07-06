@@ -152,23 +152,30 @@ export class SceneManager {
             // スカイボックスメッシュを作成
             const skybox = BABYLON.MeshBuilder.CreateSphere("skybox", {diameter: settings.DIAMETER}, this.scene);
             
-            // ダイナミックテクスチャを作成
-            const textureSize = 512;
+            // Bruno Simonスタイルの2x2テクスチャを作成
+            const textureSize = 2;
             const dynamicTexture = new BABYLON.DynamicTexture("gradientTexture", textureSize, this.scene, false);
+            dynamicTexture.hasAlpha = false;
             
-            // Canvasコンテキストを取得してグラデーションを描画
+            // Canvasコンテキストを取得
             const ctx = dynamicTexture.getContext();
             
-            // グラデーションを作成
-            const gradient = ctx.createLinearGradient(0, 0, 0, textureSize);
-            gradient.addColorStop(0, "rgb(235, 242, 250)");      // 上部: 明るいライトブルーグレー
-            gradient.addColorStop(0.4, "rgb(166, 179, 191)");    // 中間上: 中程度のグレー
-            gradient.addColorStop(0.6, "rgb(166, 179, 191)");    // 中間下: 中程度のグレー
-            gradient.addColorStop(1, "rgb(77, 89, 102)");        // 下部: 濃いグレー
+            // 2x2ピクセルで各コーナーに色を設定（Bruno Simonスタイル）
+            // 左上: 明るい空色
+            ctx.fillStyle = "rgb(255, 244, 230)";
+            ctx.fillRect(0, 0, 1, 1);
             
-            // グラデーションを描画
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, textureSize, textureSize);
+            // 右上: 明るい空色
+            ctx.fillStyle = "rgb(255, 244, 230)";
+            ctx.fillRect(1, 0, 1, 1);
+            
+            // 左下: オレンジ系の地面色
+            ctx.fillStyle = "rgb(255, 200, 150)";
+            ctx.fillRect(0, 1, 1, 1);
+            
+            // 右下: オレンジ系の地面色
+            ctx.fillStyle = "rgb(255, 200, 150)";
+            ctx.fillRect(1, 1, 1, 1);
             
             // テクスチャを更新
             dynamicTexture.update();
