@@ -100,12 +100,19 @@ export class RoomManager {
             
             console.log(`Processing mesh ${index}: ${mesh.name}`);
             
+            // 名前に基づいて床と壁を識別
+            const meshNameLower = mesh.name.toLowerCase();
+            
+            // 車両メッシュが含まれている場合は削除
+            if (meshNameLower.includes('cosmo') || meshNameLower.includes('vehicle') || meshNameLower.includes('car')) {
+                console.log(`⚠️ 車両メッシュを検出: ${mesh.name} - 削除します`);
+                mesh.dispose();
+                return;
+            }
+            
             // メッシュの設定
             mesh.isPickable = true;
             mesh.receiveShadows = true;
-            
-            // 名前に基づいて床と壁を識別
-            const meshNameLower = mesh.name.toLowerCase();
             
             if (meshNameLower.includes('floor') || 
                 meshNameLower.includes('ground') || 

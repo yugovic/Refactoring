@@ -152,6 +152,10 @@ export class VehicleAnimation {
                 // クローンを作成
                 this.animatedVehicle = mesh.clone(`animated_${vehicleType}`);
                 
+                // 元のメッシュを削除（重要：クローン後に削除）
+                mesh.dispose();
+                console.log("🗑️ 元の車両メッシュを削除しました");
+                
                 // スケール設定
                 this.animatedVehicle.scaling = new BABYLON.Vector3(0.1, 0.1, 0.1);
                 
