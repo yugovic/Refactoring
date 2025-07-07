@@ -31,6 +31,11 @@ export class UIManager {
         
         // アニメーションコントロール
         this.animationControls = null;
+        
+        // イベントリスナーの管理
+        this.eventListeners = [];
+        this.resizeHandler = null;
+        this.keyboardHandler = null;
     }
 
     /**
@@ -250,7 +255,7 @@ export class UIManager {
     setupAssetButtons() {
         // 車両配置ボタン
         if (this.elements.placeVehicleBtn) {
-            this.elements.placeVehicleBtn.addEventListener("click", () => {
+            this.addEventListenerWithTracking(this.elements.placeVehicleBtn, "click", () => {
                 const vehicleManager = this.app.getManager('vehicle');
                 if (vehicleManager.hasSelectedVehicle()) {
                     // すでに車両配置モードの場合は何もしない
@@ -268,7 +273,7 @@ export class UIManager {
         
         // 車両変更ボタン
         if (this.elements.changeVehicleBtn) {
-            this.elements.changeVehicleBtn.addEventListener("click", () => {
+            this.addEventListenerWithTracking(this.elements.changeVehicleBtn, "click", () => {
                 const vehicleManager = this.app.getManager('vehicle');
                 vehicleManager.showModal();
             });
@@ -277,7 +282,7 @@ export class UIManager {
         // ビジュアルグリッドのアセットアイテム
         const assetItems = document.querySelectorAll('.asset-item');
         assetItems.forEach(item => {
-            item.addEventListener('click', () => {
+            this.addEventListenerWithTracking(item, 'click', () => {
                 const assetType = item.dataset.assetType;
                 const assetFile = item.dataset.assetFile;
                 
@@ -1682,5 +1687,72 @@ const cameraSettings = {
                 notification.remove();
             }, 300);
         }, 2000);
+    }
+    
+    /**
+     * イベントリスナーを追跡付きで追加
+     * @param {HTMLElement} element - 要素
+     * @param {string} event - イベントタイプ
+     * @param {Function} handler - ハンドラー関数
+     * @param {Object} options - オプション
+     */
+    addEventListenerWithTracking(element, event, handler, options = {}) {
+        if (!element) return;
+        
+        element.addEventListener(event, handler, options);
+        this.eventListeners.push({ element, event, handler, options });
+    }
+    
+    /**
+     * リソースをクリーンアップ
+     */
+    dispose() {
+        console.log('🧹 UIManager: クリーンアップを開始');
+        
+        // すべてのイベントリスナーを削除
+        this.eventListeners.forEach(({ element, event, handler, options }) => {
+            if (element && element.removeEventListener) {
+                element.removeEventListener(event, handler, options);
+            }
+        });
+        this.eventListeners = [];
+        
+        // グローバルイベントリスナーを削除
+        if (this.resizeHandler) {
+            window.removeEventListener('resize', this.resizeHandler);
+            this.resizeHandler = null;
+        }
+        
+        if (this.keyboardHandler) {
+            document.removeEventListener('keydown', this.keyboardHandler);
+            this.keyboardHandler = null;
+        }
+        
+        // DOM要素を削除
+        if (this.positionIndicator) {
+            this.positionIndicator.remove();
+            this.positionIndicator = null;
+        }
+        
+        if (this.cameraPositionDisplay) {
+            this.cameraPositionDisplay.remove();
+            this.cameraPositionDisplay = null;
+        }
+        
+        if (this.firstPersonGuide) {
+            this.firstPersonGuide.remove();
+            this.firstPersonGuide = null;
+        }
+        
+        // アニメーションコントロールをクリーンアップ
+        if (this.animationControls) {
+            this.animationControls.dispose();
+            this.animationControls = null;
+        }
+        
+        // 要素の参照をクリア
+        this.elements = {};
+        
+        console.log('✅ UIManager: クリーンアップ完了');
     }
 }

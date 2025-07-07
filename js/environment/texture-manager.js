@@ -8,6 +8,10 @@ export class TextureManager {
         this.scene = scene;
         this.errorHandler = errorHandler;
         
+        // メモリ管理設定
+        this.maxCacheSize = 30; // 最大キャッシュ数
+        this.cacheAccessTime = new Map(); // キャッシュへのアクセス時間を記録
+        
         // テクスチャープリセット定義
         this.TEXTURE_PRESETS = {
             floor: {
@@ -222,7 +226,14 @@ export class TextureManager {
     createMaterial(materialName, config, isWall) {
         // キャッシュから取得
         if (this.textureCache.has(materialName)) {
+            // アクセス時間を更新
+            this.cacheAccessTime.set(materialName, Date.now());
             return this.textureCache.get(materialName);
+        }
+        
+        // キャッシュサイズチェック
+        if (this.textureCache.size >= this.maxCacheSize) {
+            this.cleanupOldestTextures();
         }
         
         const material = new BABYLON.StandardMaterial(materialName, this.scene);
@@ -258,6 +269,7 @@ export class TextureManager {
         
         // キャッシュに保存
         this.textureCache.set(materialName, material);
+        this.cacheAccessTime.set(materialName, Date.now());
         
         return material;
     }
@@ -514,15 +526,56 @@ export class TextureManager {
     }
     
     /**
+     * 最も古いテクスチャーをクリーンアップ
+     */
+    cleanupOldestTextures() {
+        try {
+            // アクセス時間でソートして最も古いものから削除
+            const sortedEntries = Array.from(this.cacheAccessTime.entries())
+                .sort((a, b) => a[1] - b[1]);
+            
+            // 最大キャッシュサイズの20%を削除
+            const deleteCount = Math.ceil(this.maxCacheSize * 0.2);
+            
+            for (let i = 0; i < deleteCount && i < sortedEntries.length; i++) {
+                const [materialName] = sortedEntries[i];
+                const material = this.textureCache.get(materialName);
+                
+                if (material) {
+                    console.log(`🗑️ テクスチャーキャッシュをクリーンアップ: ${materialName}`);
+                    
+                    // テクスチャーを破棄
+                    if (material.diffuseTexture) {
+                        material.diffuseTexture.dispose();
+                    }
+                    material.dispose();
+                    
+                    // キャッシュから削除
+                    this.textureCache.delete(materialName);
+                    this.cacheAccessTime.delete(materialName);
+                }
+            }
+        } catch (error) {
+            this.errorHandler.handleError(error, 'TextureManager.cleanupOldestTextures');
+        }
+    }
+    
+    /**
      * クリーンアップ
      */
     dispose() {
+        // すべてのテクスチャーを破棄
         this.textureCache.forEach((material, key) => {
             if (material.diffuseTexture) {
                 material.diffuseTexture.dispose();
             }
             material.dispose();
         });
+        
+        // キャッシュをクリア
         this.textureCache.clear();
+        this.cacheAccessTime.clear();
+        
+        console.log('✅ TextureManager: すべてのリソースを破棄しました');
     }
 }

@@ -1121,6 +1121,10 @@ export class AssetPlacer {
      * @param {BABYLON.Mesh} mesh - 削除するメッシュ
      */
     removeAsset(mesh) {
+        if (!mesh) return;
+        
+        console.log(`🗑️ アセットを削除: ${mesh.name}`);
+        
         const index = this.placedAssets.indexOf(mesh);
         if (index > -1) {
             this.placedAssets.splice(index, 1);
@@ -1128,6 +1132,22 @@ export class AssetPlacer {
         
         // 衝突検出システムからも削除
         this.collisionDetector.unregisterAsset(mesh);
+        
+        // バウンディングボックスを削除
+        if (mesh.metadata && mesh.metadata.visualBoundingBox) {
+            console.log(`  📦 バウンディングボックスも削除`);
+            mesh.metadata.visualBoundingBox.dispose();
+            mesh.metadata.visualBoundingBox = null;
+        }
+        
+        // 子メッシュも含めて削除
+        if (mesh.getChildMeshes) {
+            const children = mesh.getChildMeshes();
+            console.log(`  👶 ${children.length}個の子メッシュも削除`);
+            children.forEach(child => {
+                child.dispose();
+            });
+        }
         
         if (mesh && mesh._scene) {
             mesh.dispose();
@@ -1138,18 +1158,30 @@ export class AssetPlacer {
      * すべてのアセットをクリア
      */
     clearAllAssets() {
-        this.placedAssets.forEach(mesh => {
-            if (mesh && mesh._scene) {
-                mesh.dispose();
-            }
+        console.log(`🧹 すべてのアセットをクリア (${this.placedAssets.length}個)`);
+        
+        // 各アセットを適切に削除
+        const assetsToRemove = [...this.placedAssets];
+        assetsToRemove.forEach(mesh => {
+            this.removeAsset(mesh);
         });
         
+        // 念のため配列をクリア
         this.placedAssets = [];
         
         // 衝突検出システムもクリア
         this.collisionDetector.clear();
         
-        console.log("All placed assets cleared");
+        // バウンディングボックスの残骸をクリーンアップ
+        const orphanedBoundingBoxes = this.scene.meshes.filter(m => 
+            m.metadata && m.metadata.isBoundingBox
+        );
+        orphanedBoundingBoxes.forEach(box => {
+            console.log(`  🗑️ 残存バウンディングボックスを削除: ${box.name}`);
+            box.dispose();
+        });
+        
+        console.log("✅ All placed assets cleared");
     }
 
     /**
@@ -1459,13 +1491,24 @@ export class AssetPlacer {
      * クリーンアップ
      */
     dispose() {
-        console.log("Disposing AssetPlacer...");
+        console.log("🧹 AssetPlacer: クリーンアップを開始");
         
         // スケール設定を保存
         this.saveScaleSettings();
         
+        // すべてのアセットをクリア
         this.clearAllAssets();
+        
+        // 参照をクリア
         this.shadowGenerator = null;
         this.lastWallNormal = null;
+        this.uploadedAssetScales.clear();
+        
+        // 衝突検出システムをクリーンアップ
+        if (this.collisionDetector && this.collisionDetector.dispose) {
+            this.collisionDetector.dispose();
+        }
+        
+        console.log("✅ AssetPlacer: クリーンアップ完了");
     }
 }
