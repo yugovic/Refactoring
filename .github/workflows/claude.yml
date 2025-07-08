@@ -11,10 +11,10 @@ on:
     types: [opened, synchronize]
 
 permissions:
-  contents: read
+  contents: write
   issues: write
   pull-requests: write
-  id-token: write
+  actions: read
 
 jobs:
   claude-code-review:
@@ -33,7 +33,7 @@ jobs:
           fetch-depth: 0
 
       - name: Claude Code Review
-        uses: anthropics/claude-code-action@main
+        uses: anthropics/claude-code-action@beta
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
