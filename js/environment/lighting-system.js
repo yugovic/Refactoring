@@ -15,6 +15,7 @@ export class LightingSystem {
         // ライト
         this.ambientLight = null;
         this.directionalLight = null;
+        this.rimLight = null;  // リムライトを追加
         this.pointLight1 = null;
         this.pointLight2 = null;
         
@@ -42,6 +43,9 @@ export class LightingSystem {
             
             // 方向光源を作成
             this.createDirectionalLight();
+            
+            // リムライトを作成（Three.jsの例に合わせて）
+            this.createRimLight();
             
             // ポイントライトを作成
             this.createPointLights();
@@ -73,21 +77,13 @@ export class LightingSystem {
             this.scene
         );
         
-        const ambientSettings = LIGHTING_SETTINGS.AMBIENT;
-        this.ambientLight.intensity = this.settings.ambient.intensity;
-        this.ambientLight.diffuse = hexToColor3(this.settings.ambient.color);
-        this.ambientLight.specular = new BABYLON.Color3(
-            ambientSettings.SPECULAR.r,
-            ambientSettings.SPECULAR.g,
-            ambientSettings.SPECULAR.b
-        );
-        this.ambientLight.groundColor = new BABYLON.Color3(
-            ambientSettings.GROUND_COLOR.r,
-            ambientSettings.GROUND_COLOR.g,
-            ambientSettings.GROUND_COLOR.b
-        );
+        // Three.jsの例に合わせて調整（0xfff2e5, 0x080820, 1.1）
+        this.ambientLight.intensity = 0.8; // 明度を少し下げる
+        this.ambientLight.diffuse = new BABYLON.Color3(1.0, 0.949, 0.898); // #fff2e5 (上からの光)
+        this.ambientLight.specular = new BABYLON.Color3(0.1, 0.1, 0.15);
+        this.ambientLight.groundColor = new BABYLON.Color3(0.01, 0.01, 0.02); // もっと暗い色に変更（ほぼ黒）
         
-        console.log("Ambient light created");
+        console.log("Ambient light created with warm tone");
     }
 
     /**
@@ -132,6 +128,28 @@ export class LightingSystem {
         this.directionalLight.orthoBottom = -20;
         
         console.log("Directional light created");
+    }
+
+    /**
+     * リムライトを作成（Three.jsの例に合わせて）
+     */
+    createRimLight() {
+        // Three.jsの例：rim.position.set(0, 1, 1);
+        this.rimLight = new BABYLON.DirectionalLight(
+            "rimLight",
+            new BABYLON.Vector3(0, -1, -1), // Babylon.jsでは方向ベクトルを使用
+            this.scene
+        );
+        
+        this.rimLight.position = new BABYLON.Vector3(0, 1, 1);
+        this.rimLight.intensity = 0.8;
+        this.rimLight.diffuse = new BABYLON.Color3(1, 1, 1); // 白色
+        this.rimLight.specular = new BABYLON.Color3(1, 1, 1);
+        
+        // 影は生成しない（リムライト効果のため）
+        this.rimLight.shadowEnabled = false;
+        
+        console.log("Rim light created");
     }
 
     /**

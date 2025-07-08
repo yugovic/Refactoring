@@ -214,11 +214,54 @@ export class App {
             
             // カメラをセットアップ
             this.managers.camera.setupDefaultCamera();
+            
+            // ポストプロセス効果を追加（ブルーム効果）
+            this.setupPostProcessing();
+            
             this.loadingManager.setProgress(90);
             
         } catch (error) {
             this.loadingManager.showError("環境のセットアップに失敗しました");
             throw error;
+        }
+    }
+
+    /**
+     * ポストプロセス効果をセットアップ
+     */
+    setupPostProcessing() {
+        try {
+            const scene = this.managers.scene.getScene();
+            const camera = this.managers.camera.getActiveCamera();
+            
+            if (!scene || !camera) {
+                console.warn("Scene or camera not available for post-processing");
+                return;
+            }
+            
+            // デフォルトパイプラインを作成
+            const pipeline = new BABYLON.DefaultRenderingPipeline(
+                "defaultPipeline",
+                true,  // HDRテクスチャーを使用
+                scene,
+                [camera]
+            );
+            
+            // ブルーム効果を有効化（Three.jsの例に合わせて intensity: 0.5）
+            pipeline.bloomEnabled = true;
+            pipeline.bloomThreshold = 0.8;
+            pipeline.bloomWeight = 0.5;  // Three.jsのintensity: 0.5に相当
+            pipeline.bloomKernel = 64;
+            pipeline.bloomScale = 0.5;
+            
+            // 追加の視覚効果（オプション）
+            pipeline.fxaaEnabled = true;  // アンチエイリアシング
+            
+            console.log("Post-processing effects enabled (bloom intensity: 0.5)");
+            
+        } catch (error) {
+            console.warn("Failed to setup post-processing:", error);
+            // ポストプロセスの失敗はアプリケーションの動作に影響しないため、警告のみ
         }
     }
 

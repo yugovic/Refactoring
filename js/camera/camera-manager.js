@@ -147,17 +147,17 @@ export class CameraManager {
         const canvas = engine.getRenderingCanvas();
         const canvasWidth = canvas.width;
         
-        // 36×36の描画範囲を実現するために基本値を18に設定
+        // 30×30の描画範囲を実現するために基本値を15に設定
         let orthoSize;
         if (customOrthoSize !== null) {
             orthoSize = customOrthoSize;
         } else {
             if (canvasWidth <= 768) {
-                orthoSize = 18; // モバイル（36×36）
+                orthoSize = 15; // モバイル（30×30）
             } else if (canvasWidth <= 1024) {
-                orthoSize = 18; // タブレット（36×36）
+                orthoSize = 15; // タブレット（30×30）
             } else {
-                orthoSize = 18; // デスクトップ（36×36）
+                orthoSize = 15; // デスクトップ（30×30）
             }
             
             // ズームレベルを適用
