@@ -14,6 +14,7 @@ permissions:
   contents: read
   issues: write
   pull-requests: write
+  id-token: write
 
 jobs:
   claude-code-review:
@@ -34,23 +35,5 @@ jobs:
       - name: Claude Code Review
         uses: anthropics/claude-code-action@main
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
-          
-      - name: Post review comment
-        if: success()
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const context = github.context;
-            let comment_body = "Claude has reviewed your code. Check the review above.";
-            
-            if (context.eventName === 'issue_comment' || context.eventName === 'pull_request_review_comment') {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number || context.payload.pull_request.number,
-                body: comment_body
-              });
-            }
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
